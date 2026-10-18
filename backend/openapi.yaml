@@ -1,0 +1,1816 @@
+openapi: 3.1.0
+info:
+  title: 多模态 RAG 知识库 API
+  version: 0.2.0
+  description: |
+    多模态 RAG 知识库服务端接口规范（冻结契约 v2）。
+    检索走本地 Ollama bge-m3，生成走 OpenAI 兼容 Chat API；统一响应信封 code/message/data/request_id，
+    业务接口前缀 /api/v1。除 GET /api/v1/health、GET /、GET /openapi.yaml 外，配置了 server.auth_token 后都需 Bearer 鉴权。
+servers:
+  - url: http://127.0.0.1:8080
+    description: 本地默认地址
+tags:
+  - name: System
+    description: 健康、配置、Demo 页与规范本身
+  - name: Chat
+    description: 问答生成（SSE 流式 / 一次性 JSON）
+  - name: Retrieval
+    description: 纯检索，调试与评测用
+  - name: Ingest
+    description: 入库任务与进度
+  - name: Documents
+    description: 上传、资产读取、文档列表与删除
+  - name: Sites
+    description: 结构化景点数据
+  - name: Observability
+    description: 健康检查、索引统计、链路留痕
+security:
+  - BearerAuth: []
+paths:
+  /:
+    get:
+      tags: [System]
+      operationId: getDemoPage
+      summary: 内置 Demo 页面
+      description: 返回 web/index.html，不需要鉴权。
+      security: []
+      responses:
+        '200':
+          description: HTML 页面
+          content:
+            text/html:
+              schema:
+                type: string
+  /openapi.yaml:
+    get:
+      tags: [System]
+      operationId: getOpenApiSpec
+      summary: 获取 OpenAPI 3.1 规范
+      security: []
+      responses:
+        '200':
+          description: OpenAPI 规范文本
+          content:
+            application/yaml:
+              schema:
+                type: string
+  /api/v1/health:
+    get:
+      tags: [Observability]
+      operationId: healthCheck
+      summary: 健康检查
+      description: 无需认证。HTTP 恒为 200，依赖不全时用 data.status=degraded 表达。
+      security: []
+      responses:
+        '200':
+          description: 健康状态
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Health'
+  /api/v1/config:
+    get:
+      tags: [System]
+      operationId: getPublicConfig
+      summary: 前端可见配置
+      responses:
+        '200':
+          description: 前端可见配置
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PublicConfig'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/stats:
+    get:
+      tags: [Observability]
+      operationId: getStats
+      summary: 索引统计与可过滤元数据取值
+      responses:
+        '200':
+          description: 索引统计与 facets
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Stats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/chat:
+    post:
+      tags: [Chat]
+      operationId: chatCompletion
+      summary: 问答（SSE 流式 / 一次性 JSON）
+      description: |
+        stream=true（默认）时返回 text/event-stream，事件顺序固定为
+        meta → sites → sources → delta* → structured → done，出错走 error。
+        每个事件为一行 event 加一行单行 JSON data，事件之间以空行分隔；每 15s 发一行 ": ping" 保活注释。
+        stream=false 时返回统一信封包裹的 ChatResponse。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: |
+            二选一（oneOf 语义）。application/json 对应 stream=false 的完整答案；
+            text/event-stream 对应 stream=true 的 SSE 事件流。
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ChatResponse'
+            text/event-stream:
+              schema:
+                type: string
+              description: |
+                SSE 事件流。事件名与顺序 meta → sites → sources → delta* → structured → done，出错走 error。
+                meta: {request_id, model, rewritten_question}
+                sites: {sites: Site[]}，仅启用工具且命中景点时出现
+                sources: {sources: Hit[]}
+                delta: {content: string}，原始模型输出片段，0~N 次
+                structured: StructuredAnswer，仅 answer_format=structured 且 JSON 解析成功时出现
+                done: {answer, usage, elapsed_ms, ttft_ms, model}
+                error: {code, message}，出现后服务端关闭连接
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/UpstreamError'
+        '503':
+          $ref: '#/components/responses/NotReady'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/search:
+    post:
+      tags: [Retrieval]
+      operationId: searchChunks
+      summary: 纯检索
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: 检索命中
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          hits:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Hit'
+                          elapsed_ms:
+                            type: integer
+                            example: 37
+                          candidates:
+                            type: object
+                            properties:
+                              dense:
+                                type: integer
+                                example: 20
+                              sparse:
+                                type: integer
+                                example: 20
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/NotReady'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/retrieve:
+    post:
+      tags: [Retrieval]
+      operationId: retrieveChunks
+      summary: 纯检索（/search 的别名）
+      description: 与 POST /api/v1/search 完全等价。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: 检索命中
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          hits:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Hit'
+                          elapsed_ms:
+                            type: integer
+                            example: 37
+                          candidates:
+                            type: object
+                            properties:
+                              dense:
+                                type: integer
+                                example: 20
+                              sparse:
+                                type: integer
+                                example: 20
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/NotReady'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/assets:
+    post:
+      tags: [Documents]
+      operationId: uploadAsset
+      summary: 上传资料（multipart）
+      description: 上传即登记一份文档，asset_id 与 doc_id 同值。超限或扩展名不允许返回 40001。
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 必填，单文件
+                source:
+                  type: string
+                  description: 可选，目标相对路径；缺省用上传文件名
+                ingest:
+                  type: string
+                  description: 可选，true 时上传后立即入库（异步）
+                dynasty:
+                  type: string
+                  description: 可选，朝代
+                place:
+                  type: string
+                  description: 可选，地点
+                topic:
+                  type: string
+                  description: 可选，主题
+                source_type:
+                  type: string
+                  description: 可选，来源类型
+                credibility:
+                  type: string
+                  description: 可选，可信度 high | medium | low
+                abilities:
+                  type: string
+                  description: 可选，逗号分隔的能力标签
+      responses:
+        '200':
+          description: 上传结果
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          asset_id:
+                            type: string
+                            example: 9a8b7c6d5e4f3021
+                          doc_id:
+                            type: string
+                            example: 9a8b7c6d5e4f3021
+                          source:
+                            type: string
+                            example: 乐山大佛.md
+                          size:
+                            type: integer
+                            example: 10240
+                          job_id:
+                            type: string
+                            example: j_7f3a91c2
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/documents/upload:
+    post:
+      tags: [Documents]
+      operationId: uploadDocument
+      summary: 上传资料（/assets 的别名）
+      description: 与 POST /api/v1/assets 完全等价。
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                source:
+                  type: string
+                ingest:
+                  type: string
+                dynasty:
+                  type: string
+                place:
+                  type: string
+                topic:
+                  type: string
+                source_type:
+                  type: string
+                credibility:
+                  type: string
+                abilities:
+                  type: string
+      responses:
+        '200':
+          description: 上传结果
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          asset_id:
+                            type: string
+                          doc_id:
+                            type: string
+                          source:
+                            type: string
+                          size:
+                            type: integer
+                          job_id:
+                            type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/assets/{doc_id}/{name}:
+    get:
+      tags: [Documents]
+      operationId: getAsset
+      summary: 读取图片等二进制资源
+      description: 返回二进制内容，Content-Type 按扩展名推断，Cache-Control 为 public, max-age=86400。图片引用的 asset_url 就是这个路径。
+      parameters:
+        - $ref: '#/components/parameters/DocId'
+        - $ref: '#/components/parameters/AssetName'
+      responses:
+        '200':
+          description: 二进制资源
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ingest:
+    post:
+      tags: [Ingest]
+      operationId: triggerIngest
+      summary: 触发入库任务
+      description: 同一时刻只允许一个入库任务；已有任务运行返回 40900。
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestRequest'
+      responses:
+        '200':
+          description: 任务已创建
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          job_id:
+                            type: string
+                            example: j_7f3a91c2
+                          status:
+                            type: string
+                            example: running
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ingest/jobs:
+    get:
+      tags: [Ingest]
+      operationId: listIngestJobs
+      summary: 任务列表
+      description: 按启动时间倒序，最多 20 条。
+      responses:
+        '200':
+          description: 任务列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          jobs:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Job'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ingest/jobs/{id}:
+    get:
+      tags: [Ingest]
+      operationId: getIngestJob
+      summary: 任务详情与进度
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: 任务详情
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Job'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ingest/jobs/{id}/cancel:
+    post:
+      tags: [Ingest]
+      operationId: cancelIngestJob
+      summary: 取消任务
+      description: 取消是异步的，立即返回 cancelling，之后状态转为 cancelled。
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: 已请求取消
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          job_id:
+                            type: string
+                            example: j_7f3a91c2
+                          status:
+                            type: string
+                            example: cancelling
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/documents:
+    get:
+      tags: [Documents]
+      operationId: listDocuments
+      summary: 文档列表
+      responses:
+        '200':
+          description: 文档列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          documents:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Doc'
+                          total:
+                            type: integer
+                            example: 3
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/documents/{id}:
+    delete:
+      tags: [Documents]
+      operationId: deleteDocument
+      summary: 删除文档及其索引
+      description: 删除索引块、资产文件与 manifest 记录，不删除 docs_dir 里的原文件。
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: 删除结果
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          doc_id:
+                            type: string
+                            example: 9a8b7c6d5e4f3021
+                          removed_chunks:
+                            type: integer
+                            example: 7
+                          removed_assets:
+                            type: integer
+                            example: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/sites:
+    get:
+      tags: [Sites]
+      operationId: listSites
+      summary: 景点列表
+      description: 数据来源 configs/sites.json；文件不存在时返回空列表，服务照常运行。
+      responses:
+        '200':
+          description: 景点列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          sites:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Site'
+                          total:
+                            type: integer
+                            example: 2
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/sites/{id}:
+    get:
+      tags: [Sites]
+      operationId: getSite
+      summary: 单个景点结构化数据
+      description: 支持用 id、name 或 aliases 里的任一名称查询。
+      parameters:
+        - $ref: '#/components/parameters/SiteId'
+      responses:
+        '200':
+          description: 景点详情
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Site'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/traces:
+    get:
+      tags: [Observability]
+      operationId: listTraces
+      summary: 最近问答链路留痕
+      description: 最近 100 条内存留痕，倒序。
+      responses:
+        '200':
+          description: 留痕列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          traces:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Trace'
+                          total:
+                            type: integer
+                            example: 12
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/recognize:
+    post:
+      tags: [vision]
+      summary: 拍照识景 —— 给一张照片，判断它是候选古迹里的哪一处
+      description: |
+        固定用「候选受限单选」而不是让模型自由回答：本机实测，自由回答在 42 张真·成都武侯祠
+        照片上只命中 38 张，还会把武侯祠说成「桃园三结义景区」；候选清单 + 每个候选一句
+        肉眼可见的特征之后命中 41/42。候选表由调用方给出（前端把地图上的古迹连同 id 发过来），
+        所以识别结果天然带调用方的 id，可以直接跳转。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  description: data URL 或裸 base64，规则与 /api/v1/chat 的 images 相同（解码后 <= 8 MiB）
+                candidates:
+                  type: array
+                  maxItems: 20
+                  description: 候选古迹。不传就用内置的成都古迹表（武侯祠/杜甫草堂/都江堰/三星堆/金沙/乐山大佛/剑门关/三苏祠/宽窄巷子/其他景点/不是景点）
+                  items:
+                    type: object
+                    required: [name]
+                    properties:
+                      id:
+                        type: string
+                        example: wuhou
+                      name:
+                        type: string
+                        example: 武侯祠
+                      hint:
+                        type: string
+                        description: 照片里看得见的特征，越具体越准
+                        example: 成都武侯祠博物馆：红墙夹道、翠竹成荫、明清祠堂建筑群（诸葛亮殿、三义庙），君臣合祀
+                temperature:
+                  type: number
+                  minimum: 0
+                  maximum: 2
+                  default: 0
+      responses:
+        '200':
+          description: 识别结果（landmark 是候选表里的名字；没命中就是模型原话）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 0
+                  message:
+                    type: string
+                    example: ok
+                  data:
+                    type: object
+                    properties:
+                      landmark:
+                        type: string
+                        example: 武侯祠
+                      site_id:
+                        type: string
+                        example: wuhou
+                      matched:
+                        type: boolean
+                      match_mode:
+                        type: string
+                        enum: [exact, contains, fallback]
+                      raw:
+                        type: string
+                        description: 模型原话，未加工，便于人工复核
+                      candidates:
+                        type: array
+                        items:
+                          type: string
+                      model:
+                        type: string
+                        example: qwen2.5vl-16k:latest
+                      elapsed_ms:
+                        type: integer
+                        example: 214
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '502':
+          $ref: '#/components/responses/UpstreamError'
+        '503':
+          $ref: '#/components/responses/NotReady'
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: '配置了 server.auth_token 时，除 GET /api/v1/health 外的 /api/v1 接口都需要 Authorization: Bearer <token>；缺失或错误返回 401 + code=40100。'
+  parameters:
+    DocId:
+      name: doc_id
+      in: path
+      required: true
+      description: 文档 ID
+      schema:
+        type: string
+        example: 9a8b7c6d5e4f3021
+    AssetName:
+      name: name
+      in: path
+      required: true
+      description: 资产文件名
+      schema:
+        type: string
+        example: img_001.png
+    JobId:
+      name: id
+      in: path
+      required: true
+      description: 入库任务 ID
+      schema:
+        type: string
+        example: j_7f3a91c2
+    DocumentId:
+      name: id
+      in: path
+      required: true
+      description: 文档 ID
+      schema:
+        type: string
+        example: 9a8b7c6d5e4f3021
+    SiteId:
+      name: id
+      in: path
+      required: true
+      description: 景点 id、name 或 aliases 中的任一名称
+      schema:
+        type: string
+        example: leshan-buddha
+  responses:
+    BadRequest:
+      description: 参数校验失败（40001）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: 未认证或 token 错误（40100）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: 资源不存在（40400）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: 状态冲突，例如已有入库任务在运行（40900）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: 触发限流（42900）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalError:
+      description: 服务内部错误（50000）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UpstreamError:
+      description: 上游模型服务错误，Ollama 或 Chat API（50200）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotReady:
+      description: 依赖未就绪，模型缺失或索引为空（50300）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Envelope:
+      type: object
+      description: 统一响应信封。除 SSE 与二进制资源外，所有响应都使用它。
+      required: [code, message, data, request_id]
+      properties:
+        code:
+          type: integer
+          description: 0 表示成功，非 0 为业务错误码
+          example: 0
+        message:
+          type: string
+          description: 人类可读的结果说明，失败时是失败原因
+          example: ok
+        data:
+          description: 业务数据，失败时为 null
+        request_id:
+          type: string
+          description: 每请求唯一，同时回写响应头 X-Request-Id
+          example: 9f2c1a4b7e0d3355
+    Error:
+      type: object
+      description: 失败响应信封，code 非 0，data 为 null
+      properties:
+        code:
+          type: integer
+          description: 业务错误码
+          example: 40001
+        message:
+          type: string
+          example: question 不能为空
+        data:
+          description: 失败时恒为 null
+          example: null
+        request_id:
+          type: string
+          example: 9f2c1a4b7e0d3355
+      example:
+        code: 40001
+        message: question 不能为空
+        data: null
+        request_id: 9f2c1a4b7e0d3355
+    Usage:
+      type: object
+      description: token 用量
+      properties:
+        prompt_tokens:
+          type: integer
+          example: 812
+        completion_tokens:
+          type: integer
+          example: 96
+        total_tokens:
+          type: integer
+          example: 908
+    ChatMessage:
+      type: object
+      description: 一轮对话历史
+      properties:
+        role:
+          type: string
+          description: user | assistant | system
+          example: user
+        content:
+          type: string
+          example: 乐山大佛在哪？
+    Chunk:
+      type: object
+      description: 检索单元，也是引用出处。除 meta 外，元数据字段都可能为空字符串或空数组。
+      properties:
+        id:
+          type: string
+          description: 块 ID，稳定唯一
+          example: c1a2b3c4d5e6f708
+        doc_id:
+          type: string
+          description: 所属文档 ID
+          example: 9a8b7c6d5e4f3021
+        source:
+          type: string
+          description: 相对 docs_dir 的路径，正斜杠分隔
+          example: 四川地方志/乐山大佛.md
+        index:
+          type: integer
+          description: 块在文档内的序号
+          example: 3
+        text:
+          type: string
+          description: 块正文；图片块是图注，表格块是整表文本
+          example: 乐山大佛通高 71 米……
+        modality:
+          type: string
+          description: text | table | image，前端据此选渲染方式
+          enum: [text, table, image]
+          example: text
+        asset_url:
+          type: string
+          description: 仅 modality=image 时非空，可直接放进 img src 的相对路径
+          example: ''
+        locator:
+          type: string
+          description: 人类可读位置
+          example: 第 3 块
+        dynasty:
+          type: string
+          description: 朝代，未标注为空串
+          example: 唐
+        place:
+          type: string
+          description: 地点
+          example: 乐山
+        topic:
+          type: string
+          description: 主题
+          example: 水利
+        source_type:
+          type: string
+          description: 来源类型
+          example: 地方志
+        credibility:
+          type: string
+          description: 可信度
+          enum: [high, medium, low]
+          example: high
+        abilities:
+          type: array
+          description: 关联玩法能力。过滤集非空时，未标注的块视为通用内容始终可检索，已标注的块须与过滤集有交集
+          items:
+            type: string
+          example: [水利, 文物]
+        tags:
+          type: array
+          items:
+            type: string
+          example: [大佛, 石刻]
+        hash:
+          type: string
+          description: 内容指纹，用于幂等去重
+          example: 3f1a9c77b2e04d18
+        meta:
+          type: object
+          description: 零散属性，如页码、工作表名、图注模型
+          additionalProperties:
+            type: string
+          example:
+            page: '2'
+        created_at:
+          type: string
+          format: date-time
+          description: RFC3339 时间
+          example: '2026-10-10T13:22:00+08:00'
+    Filter:
+      type: object
+      description: 检索过滤。跨维度 AND，同维度 OR。abilities 是能力门禁，语义见 Chunk.abilities。
+      properties:
+        doc_ids:
+          type: array
+          items:
+            type: string
+          example: []
+        modalities:
+          type: array
+          items:
+            type: string
+            enum: [text, table, image]
+          example: [text, table]
+        dynasty:
+          type: array
+          items:
+            type: string
+          example: [唐]
+        place:
+          type: array
+          items:
+            type: string
+          example: [乐山]
+        topic:
+          type: array
+          items:
+            type: string
+          example: [水利]
+        source_type:
+          type: array
+          items:
+            type: string
+          example: [地方志]
+        credibility:
+          type: array
+          items:
+            type: string
+            enum: [high, medium, low]
+          example: [high]
+        abilities:
+          type: array
+          description: 能力门禁。过滤集非空时，未标注 abilities 的块视为通用内容始终可检索；标注了的块必须与过滤集有交集
+          items:
+            type: string
+          example: [水利]
+        tags:
+          type: array
+          items:
+            type: string
+          example: []
+    Doc:
+      type: object
+      description: 一份已入库文档
+      properties:
+        id:
+          type: string
+          example: 9a8b7c6d5e4f3021
+        title:
+          type: string
+          example: 乐山大佛
+        source:
+          type: string
+          example: 四川地方志/乐山大佛.md
+        modality:
+          type: string
+          enum: [text, table, image]
+          example: text
+        size:
+          type: integer
+          description: 文件字节数
+          example: 4821
+        chunks:
+          type: integer
+          description: 该文档切出的块数
+          example: 7
+        assets:
+          type: array
+          items:
+            type: string
+          example: [img_001.png]
+        status:
+          type: string
+          description: indexed | failed | pending
+          enum: [indexed, failed, pending]
+          example: indexed
+        error:
+          type: string
+          description: 失败原因，成功时为空串
+          example: ''
+        dynasty:
+          type: string
+          example: 唐
+        place:
+          type: string
+          example: 乐山
+        topic:
+          type: string
+          example: 水利
+        source_type:
+          type: string
+          example: 地方志
+        credibility:
+          type: string
+          enum: [high, medium, low]
+          example: high
+        abilities:
+          type: array
+          items:
+            type: string
+          example: [水利]
+        tags:
+          type: array
+          items:
+            type: string
+          example: []
+        fingerprint:
+          type: string
+          description: 内容指纹，增量入库据此判断是否改动
+          example: 3f1a9c77b2e04d18
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-10-10T13:22:00+08:00'
+    Hit:
+      type: object
+      description: 一条检索命中
+      properties:
+        chunk:
+          $ref: '#/components/schemas/Chunk'
+        score:
+          type: number
+          format: double
+          description: 融合后归一化到 0~1 的排序分
+          example: 0.7134
+        dense_score:
+          type: number
+          format: double
+          description: 稠密余弦相似度
+          example: 0.6812
+        sparse_score:
+          type: number
+          format: double
+          description: BM25 原始分，无界，仅展示与调试
+          example: 8.914
+        rank:
+          type: integer
+          description: 排名，从 1 开始，与答案里的 [n] 一一对应
+          example: 1
+        from:
+          type: string
+          description: 来自哪一路
+          enum: [dense, sparse, both]
+          example: both
+    SourceRef:
+      type: object
+      description: 一条可溯源的出处
+      properties:
+        title:
+          type: string
+          example: 《嘉州凌云寺大弥勒石像记》
+        url:
+          type: string
+          example: ''
+        license:
+          type: string
+          example: 公有领域
+        note:
+          type: string
+          example: ''
+    Site:
+      type: object
+      description: 结构化景点数据，既给前端渲染，也作为只读工具在生成前注入模型上下文
+      properties:
+        id:
+          type: string
+          example: leshan-buddha
+        name:
+          type: string
+          example: 乐山大佛
+        aliases:
+          type: array
+          items:
+            type: string
+          example: [凌云大佛, 嘉定大佛]
+        dynasty:
+          type: string
+          example: 唐
+        place:
+          type: string
+          example: 乐山
+        topic:
+          type: string
+          example: 水利
+        ability:
+          type: string
+          description: 关联玩法能力，用作检索过滤
+          example: 水利
+        summary:
+          type: string
+          example: 世界最大的石刻弥勒佛坐像。
+        description:
+          type: string
+          example: 开凿于唐开元元年（713）……
+        facts:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            高度: 71 米
+            开凿年代: 713—803 年
+            主持: 海通禅师
+        interpretation:
+          type: string
+          description: 演绎说明，与史实分开
+          example: 民间传说中的『自目可剜，佛财难得』属演绎，正史无载。
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceRef'
+        lat:
+          type: number
+          format: double
+          example: 29.545
+        lng:
+          type: number
+          format: double
+          example: 103.769
+        tags:
+          type: array
+          items:
+            type: string
+          example: [石刻, 世界遗产]
+    StructuredAnswer:
+      type: object
+      description: 史实边界要求的强约束输出，把史实陈述、资料来源、演绎说明分开
+      properties:
+        history:
+          type: string
+          description: 只写有资料支撑的史实；查不到时写知识库里没有找到相关内容
+          example: 乐山大佛通高 71 米，开凿于唐开元元年至贞元十九年 [1]。
+        sources:
+          type: array
+          description: 带编号的引用说明，与 sources 数组下标对应
+          items:
+            type: string
+          example: ['[1] 《嘉州凌云寺大弥勒石像记》—— 地方志，可信度 high']
+        interpretation:
+          type: string
+          description: 无史料支撑的推断、传说、演绎，没有就留空字符串
+          example: 关于海通禅师自剜双目的说法出自民间传说，史料无明确记载。
+        confidence:
+          type: string
+          enum: [high, medium, low]
+          example: high
+        unknown:
+          type: boolean
+          description: true 表示知识库里查不到
+          example: false
+    ChatRequest:
+      type: object
+      required: [question]
+      properties:
+        question:
+          type: string
+          description: 问题，1~2000 字
+          example: 它有多高？
+        stream:
+          type: boolean
+          default: true
+          description: false 时返回一次性 JSON
+          example: true
+        answer_format:
+          type: string
+          default: text
+          enum: [text, structured]
+          description: structured 时启用史实边界强约束
+          example: text
+        top_k:
+          type: integer
+          description: 取回片段数，1~20
+          example: 4
+        temperature:
+          type: number
+          format: double
+          description: 采样温度，0~2
+          example: 0.1
+        session_id:
+          type: string
+          description: 传入则服务端保存多轮上下文
+          example: s_7f3a91c2
+        history:
+          type: array
+          description: 最多 20 轮，超出按 token 预算从最旧开始裁剪
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+        filters:
+          $ref: '#/components/schemas/Filter'
+        abilities:
+          type: array
+          description: 便捷写法，等价于 filters.abilities
+          items:
+            type: string
+          example: [水利]
+        use_tools:
+          type: boolean
+          default: true
+          description: 是否启用服务端只读工具预取（景点数据）
+          example: true
+        rewrite:
+          type: boolean
+          description: 多轮时把追问改写成独立问题再检索
+          example: true
+    ChatResponse:
+      type: object
+      description: stream=false 时的问答结果
+      properties:
+        answer:
+          type: string
+          example: 乐山大佛通高 71 米 [1]。
+        structured:
+          description: 仅 answer_format=structured 且 JSON 解析成功时非 null
+          oneOf:
+            - $ref: '#/components/schemas/StructuredAnswer'
+            - type: 'null'
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hit'
+        sites:
+          type: array
+          description: 工具预取命中的景点，未命中为空数组
+          items:
+            $ref: '#/components/schemas/Site'
+        usage:
+          $ref: '#/components/schemas/Usage'
+        elapsed_ms:
+          type: integer
+          description: 总耗时毫秒
+          example: 3421
+        ttft_ms:
+          type: integer
+          description: 首 token 耗时毫秒
+          example: 812
+        model:
+          type: string
+          example: deepseek-chat
+        rewritten_question:
+          type: string
+          example: 乐山大佛有多高
+        request_id:
+          type: string
+          example: 9f2c1a4b7e0d3355
+    SearchRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          example: 大佛高度
+        top_k:
+          type: integer
+          example: 6
+        filters:
+          $ref: '#/components/schemas/Filter'
+        abilities:
+          type: array
+          items:
+            type: string
+          example: []
+    IngestRequest:
+      type: object
+      properties:
+        mode:
+          type: string
+          default: incremental
+          enum: [incremental, rebuild]
+          example: incremental
+        paths:
+          type: array
+          description: 可选，限定只处理这些相对路径
+          items:
+            type: string
+          example: []
+        rebuild:
+          type: boolean
+          default: false
+          description: true 等价于 mode=rebuild
+          example: false
+    Progress:
+      type: object
+      properties:
+        current:
+          type: integer
+          example: 12
+        total:
+          type: integer
+          example: 30
+        percent:
+          type: integer
+          example: 40
+    JobStats:
+      type: object
+      description: 入库任务的文件与块统计
+      properties:
+        files_total:
+          type: integer
+          example: 3
+        files_changed:
+          type: integer
+          example: 2
+        files_skipped:
+          type: integer
+          example: 1
+        chunks_added:
+          type: integer
+          example: 18
+        chunks_removed:
+          type: integer
+          example: 0
+        chunks_deduped:
+          type: integer
+          example: 0
+        assets:
+          type: integer
+          example: 1
+        elapsed_ms:
+          type: integer
+          example: 5120
+    Job:
+      type: object
+      description: 一次入库任务
+      properties:
+        job_id:
+          type: string
+          example: j_7f3a91c2
+        mode:
+          type: string
+          enum: [incremental, rebuild]
+          example: incremental
+        status:
+          type: string
+          description: running | succeeded | failed | cancelled
+          enum: [running, succeeded, failed, cancelled]
+          example: running
+        progress:
+          $ref: '#/components/schemas/Progress'
+        message:
+          type: string
+          example: 向量化 12/30
+        logs:
+          type: array
+          description: 最近日志，最多保留 200 行
+          items:
+            type: string
+          example: ['[1/3] 处理 乐山大佛.md', '  切出 7 块']
+        stats:
+          $ref: '#/components/schemas/JobStats'
+        error:
+          type: string
+          example: ''
+        started_at:
+          type: string
+          format: date-time
+          example: '2026-10-10T13:22:00+08:00'
+        finished_at:
+          type: string
+          format: date-time
+          description: 运行中为 null
+          example: null
+    ComponentHealth:
+      type: object
+      description: 单个依赖的健康状态
+      properties:
+        ok:
+          type: boolean
+          example: true
+        provider:
+          type: string
+          example: ollama
+        model:
+          type: string
+          example: bge-m3
+        dim:
+          type: integer
+          description: 仅 embedding 有
+          example: 1024
+        detail:
+          type: string
+          description: 为空表示正常，否则是原因
+          example: ''
+    IndexHealth:
+      type: object
+      properties:
+        chunks:
+          type: integer
+          example: 42
+        docs:
+          type: integer
+          example: 3
+        dim:
+          type: integer
+          example: 1024
+        backend:
+          type: string
+          enum: [file, pgvector]
+          example: file
+    Health:
+      type: object
+      description: 健康检查数据。status=degraded 表示能跑但依赖不全，HTTP 恒为 200
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+          example: ok
+        version:
+          type: string
+          example: 0.2.0
+        uptime_s:
+          type: integer
+          example: 128
+        embedding:
+          $ref: '#/components/schemas/ComponentHealth'
+        chat:
+          $ref: '#/components/schemas/ComponentHealth'
+        vision:
+          $ref: '#/components/schemas/ComponentHealth'
+        index:
+          $ref: '#/components/schemas/IndexHealth'
+    RetrievalConfig:
+      type: object
+      properties:
+        top_k:
+          type: integer
+          example: 4
+        candidate_k:
+          type: integer
+          example: 20
+        hybrid_alpha:
+          type: number
+          format: double
+          example: 0.6
+        fusion:
+          type: string
+          enum: [rrf, weighted]
+          example: rrf
+        min_score:
+          type: number
+          format: double
+          example: 0.0
+        rewrite:
+          type: boolean
+          example: true
+    ChunkingConfig:
+      type: object
+      properties:
+        size:
+          type: integer
+          example: 600
+        overlap:
+          type: integer
+          example: 90
+    UploadConfig:
+      type: object
+      properties:
+        max_mb:
+          type: integer
+          example: 32
+        accept:
+          type: array
+          items:
+            type: string
+          example: ['.txt', '.md', '.docx', '.pdf', '.xlsx', '.csv', '.html', '.png', '.jpg']
+    FeatureFlags:
+      type: object
+      description: 能力开关，前端据此隐藏不可用 UI
+      properties:
+        stream:
+          type: boolean
+          example: true
+        structured_answer:
+          type: boolean
+          example: true
+        history:
+          type: boolean
+          example: true
+        filters:
+          type: boolean
+          example: true
+        abilities:
+          type: boolean
+          example: true
+        tools:
+          type: boolean
+          example: true
+        traces:
+          type: boolean
+          example: true
+    PublicConfig:
+      type: object
+      description: 前端可见配置
+      properties:
+        version:
+          type: string
+          example: 0.2.0
+        auth_required:
+          type: boolean
+          description: true 时除 health 外都要带 token
+          example: false
+        embedding_model:
+          type: string
+          example: bge-m3
+        chat_model:
+          type: string
+          example: deepseek-chat
+        chat_provider:
+          type: string
+          example: openai
+        vision_enabled:
+          type: boolean
+          example: false
+        retrieval:
+          $ref: '#/components/schemas/RetrievalConfig'
+        chunking:
+          $ref: '#/components/schemas/ChunkingConfig'
+        upload:
+          $ref: '#/components/schemas/UploadConfig'
+        features:
+          $ref: '#/components/schemas/FeatureFlags'
+    Facets:
+      type: object
+      description: 索引里出现过的元数据取值，前端据此生成筛选器
+      properties:
+        dynasty:
+          type: array
+          items:
+            type: string
+          example: [唐, 宋]
+        place:
+          type: array
+          items:
+            type: string
+          example: [乐山, 成都]
+        topic:
+          type: array
+          items:
+            type: string
+          example: [水利, 诗词]
+        source_type:
+          type: array
+          items:
+            type: string
+          example: [地方志, 正史]
+        credibility:
+          type: array
+          items:
+            type: string
+          example: [high, medium]
+        abilities:
+          type: array
+          items:
+            type: string
+          example: [水利, 文物]
+    Stats:
+      type: object
+      description: 索引统计与可过滤元数据取值
+      properties:
+        backend:
+          type: string
+          enum: [file, pgvector]
+          example: file
+        chunks:
+          type: integer
+          example: 42
+        docs:
+          type: integer
+          example: 3
+        dim:
+          type: integer
+          example: 1024
+        modalities:
+          type: object
+          additionalProperties:
+            type: integer
+          example:
+            text: 40
+            table: 1
+            image: 1
+        assets:
+          type: integer
+          example: 1
+        data_dir:
+          type: string
+          example: 'D:\Deepseek\RAG\server\data'
+        facets:
+          $ref: '#/components/schemas/Facets'
+    TraceHit:
+      type: object
+      description: 留痕里的检索片段摘要
+      properties:
+        chunk_id:
+          type: string
+          example: c1a2b3c4d5e6f708
+        source:
+          type: string
+          example: 乐山大佛.md
+        score:
+          type: number
+          format: double
+          example: 0.71
+        from:
+          type: string
+          enum: [dense, sparse, both]
+          example: both
+    Trace:
+      type: object
+      description: 一次问答链路的留痕，最近 100 条内存保留，重启清空
+      properties:
+        request_id:
+          type: string
+          example: 9f2c1a4b7e0d3355
+        at:
+          type: string
+          format: date-time
+          example: '2026-10-10T13:22:00+08:00'
+        question:
+          type: string
+          example: 它有多高？
+        rewritten_question:
+          type: string
+          example: 乐山大佛有多高
+        hits:
+          type: array
+          items:
+            $ref: '#/components/schemas/TraceHit'
+        sites:
+          type: array
+          description: 工具命中的景点 ID
+          items:
+            type: string
+          example: [leshan-buddha]
+        prompt_chars:
+          type: integer
+          example: 1820
+        answer_chars:
+          type: integer
+          example: 96
+        model:
+          type: string
+          example: deepseek-chat
+        elapsed_ms:
+          type: integer
+          example: 3421
+        ttft_ms:
+          type: integer
+          example: 812
+        usage:
+          $ref: '#/components/schemas/Usage'
+        error:
+          type: string
+          example: ''
+

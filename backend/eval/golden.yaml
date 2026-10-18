@@ -1,0 +1,93 @@
+# 黄金问答集（示例）—— 契约 v2 的评测输入
+#
+# 语料：docs/示例-员工手册.md、docs/丘吉尔个人信息.md、docs/第二次世界大战详细资料.md
+# 字段与 internal/eval.Case 对齐，filters 用契约 2. Filter 的 snake_case 字段名。
+#
+# 说明：
+# - expected_sources 按「子串」匹配（大小写不敏感、路径分隔符归一化），这里写文件名；
+# - 契约 v2 的 Filter 没有 source 维度，所以「按来源过滤」用 modalities（modality 是
+#   契约里的类型维度）与 abilities（门禁维度）来演示；若确实要按文件过滤，需先用
+#   GET /api/v1/documents 取 doc_id，再填 filters.doc_ids。
+# - 未在入库时标注元数据的块，其 source_type/dynasty/... 为空；但 abilities 的门禁语义是
+#   「未标注 abilities 的块视为通用内容，始终可检索」（契约 2. Filter），因此
+#   abilities 过滤不会把未标注语料误杀。
+
+name: 多模态 RAG 知识库 · 示例黄金集 v1
+
+cases:
+  # ---------- 8 条有明确答案 ----------
+  - id: e01_annual_leave_days
+    question: 员工入职满 3 年但不满 5 年，可以享受多少天带薪年休假？
+    expected_sources: [示例-员工手册.md]
+    expected_keywords: ["10 天"]
+    note: 同义问法：文档写「年假」，问句用「带薪年休假」；考表格检索与数值命中，答案应为 10 天。
+
+  - id: e02_annual_leave_carry
+    question: 年假最小使用单位是什么？当年没休完最多可以结转多少天？
+    expected_sources: [示例-员工手册.md]
+    expected_keywords: ["半天", "3 天"]
+    note: 考同段落两处事实（最小单位半天、结转上限 3 天）是否都被答出。
+
+  - id: e03_work_hours
+    question: 公司标准工作时间是几点到几点？午休时间是多少？
+    expected_sources: [示例-员工手册.md]
+    expected_keywords: ["9:30", "18:30", "12:00", "13:30"]
+    note: 考四个时间点全部命中；文档原文为「上午 9:30 至下午 18:30」「12:00 至 13:30」。
+
+  - id: e04_reimburse
+    question: 费用发生后多少天内必须提交报销单？报销款什么时候发放？
+    expected_sources: [示例-员工手册.md]
+    expected_keywords: ["30 天", "次月 15 日"]
+    note: 考报销时限 30 天与发放时点「次月 15 日随工资发放」。
+
+  - id: e05_probation_alias
+    question: 劳动合同期限三年及以上的，入职后的考察期有多长？考察期工资不低于转正后工资的多少？
+    expected_sources: [示例-员工手册.md]
+    expected_keywords: ["6 个月", "80%"]
+    note: 同义问法：用「考察期」指代「试用期」；考 6 个月与 80% 两个数值。
+
+  - id: e06_churchill_birth
+    question: 丘吉尔出生在哪里？出生于哪一年？
+    expected_sources: [丘吉尔个人信息.md]
+    expected_keywords: ["布莱尼姆宫", "1874"]
+    note: 考出生地布莱尼姆宫与出生年份 1874（11 月 30 日）。
+
+  - id: e07_churchill_height
+    question: 丘吉尔的身高大约是多少？
+    expected_sources: [丘吉尔个人信息.md]
+    expected_keywords: ["1.68"]
+    note: 文中主值为约 1.68 米（5 英尺 6.5 英寸），并注明各来源在 1.67–1.75 米之间有出入。
+
+  - id: e08_wwii_turning_point
+    question: 第二次世界大战中，被视为整个战争转折点的战役是哪一场？
+    expected_sources: [第二次世界大战详细资料.md]
+    expected_keywords: ["斯大林格勒", "转折点"]
+    note: 文档明确写「斯大林格勒战役……被视为整个战争的转折点」。
+
+  # ---------- 2 条知识库里确实没有 ----------
+  - id: u01_unknown_milvus
+    question: 知识库里有没有关于 Milvus 向量数据库的部署与运维说明？
+    expect_unknown: true
+    note: 三份语料都不涉及 Milvus；期望模型回答「知识库里没有找到相关内容」，而不是编造部署步骤。
+
+  - id: u02_unknown_revenue
+    question: 公司 2024 年的营业收入和净利润分别是多少？
+    expect_unknown: true
+    note: 员工手册只有制度条款，没有任何财务数据；期望回答「没找到」而不是编造数字。
+
+  # ---------- 2 条带 filters ----------
+  - id: f01_churchill_iron_curtain_ability
+    question: 丘吉尔在哪一年、在哪座城市发表了「铁幕」演说？
+    expected_sources: [丘吉尔个人信息.md]
+    expected_keywords: ["1946", "富尔顿"]
+    filters:
+      abilities: [历史]
+    note: 带 abilities 门禁过滤（契约 2. Filter）；未标注 abilities 的通用块仍可检索，期望命中 1946 年 3 月 5 日美国富尔顿。
+
+  - id: f02_wwii_pearl_harbor_modality
+    question: 珍珠港事件发生在哪一天？日军动用了多少艘航母？
+    expected_sources: [第二次世界大战详细资料.md]
+    expected_keywords: ["1941", "6 艘"]
+    filters:
+      modalities: [text]
+    note: 带 modalities 过滤（契约 2. Filter 的 Modality 维度）；期望命中 1941.12.7（夏威夷时间）与 6 艘航母。

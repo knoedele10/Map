@@ -1,0 +1,75 @@
+# 蜀迹·成都城脉地图 —— 蓉宝（蓉宝）问答黄金集
+# 用法：ragctl eval -golden eval/golden-shu.yaml -chat
+# 每条用例用 filters.abilities 模拟「玩家已解锁该碎片」，验证能力过滤 + 检索 + 生成。
+name: shu-rongbao
+cases:
+  - id: s01_zhugeliang
+    question: "诸葛亮是谁呀？"
+    expected_sources: ["武侯祠与三国人物.md"]
+    expected_keywords: ["孔明", "琅琊"]
+    filters:
+      abilities: ["sanguo"]
+    note: "基础：人物介绍"
+  - id: s02_huiling
+    question: "刘备葬在哪里？"
+    expected_sources: ["武侯祠与三国人物.md"]
+    expected_keywords: ["惠陵"]
+    filters:
+      abilities: ["sanguo"]
+    note: "君臣合祀的由来"
+  - id: s03_dujiangyan
+    question: "都江堰有哪三大主体工程？"
+    expected_sources: ["都江堰与古代水利.md"]
+    expected_keywords: ["鱼嘴", "飞沙堰", "宝瓶口"]
+    filters:
+      abilities: ["shuili"]
+    note: "表格/并列要点检索"
+  - id: s04_dufu
+    question: "杜甫在成都写了多少首诗？"
+    expected_sources: ["杜甫草堂与成都诗篇.md"]
+    expected_keywords: ["二百四十"]
+    filters:
+      abilities: ["shici"]
+    note: "数值命中"
+  - id: s05_shenshu
+    question: "青铜神树长什么样？"
+    expected_sources: ["三星堆与古蜀文明.md"]
+    expected_keywords: ["神树"]
+    filters:
+      abilities: ["wenwu"]
+    note: "器物描述"
+  - id: s06_taiyang
+    question: "太阳神鸟金饰有什么特点？"
+    expected_sources: ["金沙遗址与太阳神鸟.md"]
+    expected_keywords: ["神鸟"]
+    filters:
+      abilities: ["jinqi"]
+    note: "金器解读"
+  - id: s07_dafo
+    question: "乐山大佛有多高？"
+    expected_sources: ["乐山大佛与唐代造像.md"]
+    expected_keywords: ["71"]
+    filters:
+      abilities: ["zaoxiang"]
+    note: "数值命中"
+  - id: s08_jianmen
+    question: "剑门关为什么重要？"
+    expected_sources: ["剑门关与古蜀道.md"]
+    expected_keywords: ["姜维"]
+    filters:
+      abilities: ["dili"]
+    note: "地理与战事"
+  - id: s09_sansu
+    question: "三苏是指谁？"
+    expected_sources: ["三苏祠与苏氏家风.md"]
+    expected_keywords: ["苏洵"]
+    filters:
+      abilities: ["jiafeng"]
+    note: "家风讲述"
+  - id: s10_same_ability_cross
+    question: "都江堰是谁主持修建的？"
+    expected_sources: ["都江堰与古代水利.md"]
+    expected_keywords: ["李冰"]
+    filters:
+      abilities: ["shuili"]
+    note: "同能力内第二条"

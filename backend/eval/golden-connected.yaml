@@ -1,0 +1,55 @@
+name: shuji-connected
+cases:
+  - id: water
+    question: 都江堰有哪些主体工程？
+    expected_sources: ["都江堰.md"]
+    expected_keywords: ["鱼嘴", "飞沙堰", "宝瓶口"]
+    filters: {abilities: [shuili]}
+    note: 项目现有水利资料及能力筛选
+  - id: wuhou
+    question: 武侯祠纪念哪些人物？
+    expected_sources: ["武侯祠.md"]
+    expected_keywords: ["刘备", "诸葛亮"]
+    filters: {abilities: [sanguo]}
+    note: 三国人物资料
+  - id: sanxingdui
+    question: 三星堆有哪些代表器物？
+    expected_sources: ["三星堆博物馆.md"]
+    expected_keywords: ["神树", "纵目面具"]
+    filters: {abilities: [wenwu]}
+    note: 文物资料
+  - id: dufu
+    question: 杜甫草堂是哪个诗人的故居？
+    expected_sources: ["杜甫草堂.md"]
+    expected_keywords: ["杜甫"]
+    filters: {abilities: [shici]}
+    note: 诗词资料
+  - id: leshan
+    question: 乐山大佛高多少米？
+    expected_sources: ["乐山大佛.md"]
+    expected_keywords: ["71"]
+    filters: {abilities: [zaoxiang]}
+    note: 数值检索
+  - id: sansu
+    question: 三苏祠纪念的三苏是谁？
+    expected_sources: ["三苏祠.md"]
+    expected_keywords: ["苏洵", "苏轼", "苏辙"]
+    filters: {abilities: [jiafeng]}
+    note: 家风资料
+  - id: jianmen
+    question: 剑门关位于哪里？
+    expected_sources: ["剑门关.md"]
+    expected_keywords: ["剑阁"]
+    filters: {abilities: [dili]}
+    note: 地理资料
+  - id: chengdu
+    question: 成都为什么又叫锦官城？
+    expected_sources: ["成都.md"]
+    expected_keywords: ["蜀锦"]
+    note: 别名扩写
+  - id: jinsha
+    question: 金沙遗址的代表金器是什么？
+    expected_sources: ["金沙遗址博物馆.md"]
+    expected_keywords: ["太阳神鸟"]
+    filters: {abilities: [jinqi]}
+    note: 金器资料

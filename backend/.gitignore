@@ -1,0 +1,9 @@
+# 本地运行配置：里面有 API Key，绝不提交
+configs/config.yaml
+configs/config.pg.yaml
+
+# 运行期产物
+bin/
+data/
+data-pg/
+*.log

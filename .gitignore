@@ -1,0 +1,14 @@
+data/runtime/
+.env
+.env.local
+.env.*.local
+config/.env.*.local
+*.log
+
+# Local credentials and generated runtime data
+**/.env
+**/.env.*.local
+data/runtime/**
+
+# Archived source snapshots and bundled build outputs
+archive/

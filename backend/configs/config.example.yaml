@@ -1,0 +1,98 @@
+# ============================================================================
+# 多模态 RAG 知识库 · 配置模板
+#
+#   复制成 configs/config.yaml 再改：
+#     Copy-Item configs\config.example.yaml configs\config.yaml
+#
+#   优先级：默认值 < 本文件 < 环境变量 RAG_<SECTION>_<KEY>
+#   字符串支持 ${ENV_VAR} 与 ${ENV_VAR:-默认值} 展开，例如：
+#     api_key: "${DEEPSEEK_API_KEY}"
+#
+#   相对路径按**进程工作目录**解析，约定在 backend/ 目录下启动服务。
+# ============================================================================
+
+server:
+  addr: "127.0.0.1:8080"        # 只监听本机；要局域网访问改成 "0.0.0.0:8080"
+  mode: "debug"                 # debug | release
+  cors_origins: ["*"]           # 前端跨域白名单；["*"] 表示不限制
+  auth_token: ""                # 非空时 /api/v1 需要 Authorization: Bearer <token>
+  request_timeout_s: 180        # 单个请求的最长处理时间
+  rate_limit_per_min: 120       # 每 IP 每分钟请求上限，0 表示不限
+  trusted_proxies: ["127.0.0.1"]
+  # 是否托管前端页面。不写 = true；写 false 后本服务只提供 /api/v1/*，
+  # 变成一个纯 API 服务，页面交给别的服务（nginx / vite / serve.mjs …）托管。
+  serve_web: true
+  # OpenAPI 规范文件的位置；留空则依次尝试进程工作目录与可执行文件同级目录。
+  openapi_file: ""
+
+storage:
+  backend: "file"               # file（默认，零依赖暴力检索）| pgvector（Postgres+pgvector）
+  data_dir: "../data/runtime/data" # 索引落盘位置
+  docs_dir: "../data/corpus"     # 资料目录（仓库根目录的 data/corpus/）
+  assets_dir: "../data/runtime/data/assets" # 从文档里抽出的图片
+  web_dir: "../frontend"         # 前端页面目录（仓库根目录的 frontend/）
+  sites_file: "../archive/houduan-delivery/sites.json" # 原始交付中的结构化景点数据
+  pgvector:                     # 仅 backend=pgvector 时生效
+    dsn: "${RAG_PG_DSN:-}"     # 例：postgres://rag:rag@127.0.0.1:5432/ragkb
+    max_conns: 8                # 连接池上限（表名固定为 rag_chunks，见 deploy/schema.sql）
+
+chunking:
+  size: 600                     # 每块最多多少字；答案缺斤少两就调大到 800
+  overlap: 90                   # 相邻块重叠字数（约 15%），防止答案正好被切在边界
+  min_chars: 20                 # 小于这个长度的块直接丢弃
+  max_chunks_per_doc: 5000      # 单文件切块上限，防御异常大文件
+  table_as_chunk: true          # 表格整体作为一个块（不按句子切散）
+
+retrieval:
+  top_k: 4                      # 最终送给模型的片段数
+  candidate_k: 20               # 稠密/稀疏各自先召回多少条再融合
+  hybrid_alpha: 0.6             # 0~1：1 = 纯向量，0 = 纯 BM25；0.6 偏语义
+  min_score: 0.0                # 融合分低于此值的命中丢弃
+  bm25_k1: 1.5
+  bm25_b: 0.75
+  fusion: "rrf"                 # rrf（推荐，只看名次，免疫量纲差异）| weighted
+  rewrite: true                 # 多轮追问时先用一次模型调用改写成独立问题再检索
+
+embedding:
+  provider: "ollama"            # ollama（本地）| openai（远程兼容接口）
+  base_url: "http://127.0.0.1:11434"
+  model: "bge-m3"               # 中文效果好、1024 维
+  api_key: ""                   # provider=openai 时才需要
+  dim: 1024                     # 必须与模型输出维度一致
+  batch_size: 8                 # 一次请求送多少条文本去向量化
+  timeout_s: 60
+  normalize: true               # 入库时做 L2 归一化，检索用点积=余弦
+
+chat:
+  provider: "openai"            # openai（任何 OpenAI 兼容服务）| ollama（纯本地兜底）
+  base_url: "https://api.deepseek.com/v1"
+  api_key: "${DEEPSEEK_API_KEY}"
+  model: "deepseek-chat"
+  temperature: 0.1              # 知识库问答要稳，别调高
+  max_tokens: 1024
+  timeout_s: 180
+  extra_headers: {}             # 某些网关需要额外头，例如 {"X-Api-Version": "v1"}
+
+vision:
+  enabled: false                # 开启后图片会被转成中文图注参与检索
+  provider: "openai"
+  base_url: "https://api.openai.com/v1"
+  api_key: "${OPENAI_API_KEY}"
+  model: "gpt-4o-mini"          # 必须支持图片输入
+  prompt: "用中文详细描述这张图片的内容：如果是图表，请把图表里的关键数据、坐标轴、趋势都写出来；如果是截图，请把可见的文字读出来；如果是照片，请描述主体、场景与关键细节。只输出描述本身，不要客套话。"
+  max_images_per_doc: 50        # 单文件最多处理多少张图，防止账单失控
+  max_image_mb: 8               # 单张图上限
+  timeout_s: 90
+
+ingest:
+  max_file_mb: 32               # 单文件上限
+  workers: 4                    # 文件级并发数
+  auto_ingest_upload: true      # 上传后是否自动触发入库
+
+prompt:
+  system: ""                    # 留空使用内置提示词（见 internal/config/config.go）
+
+log:
+  level: "info"                 # debug | info | warn | error
+
+

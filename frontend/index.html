@@ -1,0 +1,2008 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>多模态 RAG 知识库 · 控制台</title>
+<style>
+:root{
+  --bg:#0d0f11; --panel:#141719; --panel2:#191d20; --line:#252b30; --line2:#333c43;
+  --fg:#d7dde2; --dim:#8b959e; --mute:#5f6a73;
+  --accent:#2fbf9f; --accent2:#1f7f6b; --ok:#4bb96b; --warn:#d9a441; --err:#d9635f;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.6 var(--sans)}
+.mono{font-family:var(--mono)}
+.muted{color:var(--dim)}
+[hidden]{display:none !important}
+a{color:var(--accent);text-decoration:none}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#2a3137;border:2px solid var(--bg)}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- 顶部：提示条 / 状态栏 ---------- */
+.alert,.notice{display:flex;align-items:flex-start;gap:8px;padding:7px 12px;font-size:13px;border-bottom:1px solid var(--line)}
+.alert{background:#2a1616;color:#f0c9c7;border-bottom-color:#4a2321}
+.notice{background:#2a2413;color:#e8d9ae;border-bottom-color:#4d431f}
+.alert .txt,.notice .txt{flex:1;min-width:0}
+.alert .ico,.notice .ico{flex:none;display:inline-flex;padding-top:2px;color:var(--warn)}
+.alert:not(.notice) .ico{color:var(--err)}
+.alert.ok{background:#132a1d;color:#c6e8d3;border-bottom-color:#234432}
+.alert.ok .ico{color:var(--ok)}
+.topwrap{position:sticky;top:0;z-index:30;background:var(--bg)}
+.topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:7px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:7px;font-weight:600;letter-spacing:.02em;white-space:nowrap}
+.brand .ver{font-family:var(--mono);font-size:11px;color:var(--mute);font-weight:400}
+.lamps{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lamp{display:inline-flex;align-items:center;gap:5px;padding:2px 7px;border:1px solid var(--line);background:var(--panel2);font-size:12px}
+.lamp .dot{width:7px;height:7px;border-radius:50%;background:var(--mute);display:inline-block}
+.lamp.on .dot{background:var(--ok)}
+.lamp.off .dot{background:var(--err)}
+.lamp.on{border-color:#234432}
+.lamp.off{border-color:#4a2321}
+.lamp-name{color:var(--fg)}
+.lamp-model{font-size:11px;color:var(--mute);max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.metrics{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--dim)}
+.metrics b{color:var(--fg);font-weight:500}
+.grow{flex:1}
+.subbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:5px 12px;background:var(--panel2);border-bottom:1px solid var(--line);font-size:12px;color:var(--dim)}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.token-input{width:150px;font-family:var(--mono);font-size:12px;padding:2px 6px}
+
+/* ---------- 按钮 / 输入 ---------- */
+button{font:inherit;background:var(--panel2);color:var(--fg);border:1px solid var(--line2);border-radius:2px;padding:4px 9px;cursor:pointer;line-height:1.45}
+button:hover:not(:disabled){border-color:var(--accent2);color:#fff}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{border-color:var(--accent2);color:var(--accent)}
+button.danger:hover:not(:disabled){border-color:var(--err);color:var(--err)}
+button.icon-btn{padding:3px 5px;display:inline-flex;align-items:center;justify-content:center}
+input,select,textarea{font:inherit;background:#0f1214;color:var(--fg);border:1px solid var(--line2);border-radius:2px;padding:4px 7px;min-width:0}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent2)}
+input[type=range]{padding:0;background:none;border:none;accent-color:var(--accent);width:96px}
+label.ctl{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--dim);white-space:nowrap}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.grid2 input,.grid2 select{width:100%}
+.model-settings{grid-column:1/-1}
+.model-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.model-card{border:1px solid var(--line);background:#101315;padding:10px;min-width:0}
+.model-card h3{margin:0 0 7px;font-size:13px;font-weight:600}
+.model-card .grid2{grid-template-columns:1fr;gap:7px}
+.model-card small{display:block;color:var(--dim);margin-top:6px}
+.model-actions{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.model-settings .panel-body>.row{margin-bottom:8px}
+@media(max-width:900px){.model-grid{grid-template-columns:1fr}}
+.num{width:64px}
+
+/* ---------- 布局 ---------- */
+.layout{display:grid;grid-template-columns:300px minmax(0,1fr) 390px;gap:10px;padding:10px;align-items:start}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+@media (max-width:1180px){
+  .layout{grid-template-columns:1fr}
+  .chat-col{order:1}
+  .col-left{order:2}
+  .col-right{order:3}
+  .messages{max-height:52vh}
+}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:2px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 9px;border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.panel-body{padding:9px}
+.list{display:flex;flex-direction:column;gap:6px}
+.mt6{margin-top:6px}
+
+/* ---------- 文档列表 ---------- */
+.doc{border:1px solid var(--line);background:var(--panel2);padding:6px 7px}
+.doc-top{display:flex;align-items:center;gap:6px}
+.doc-name{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc-sub{font-size:11px;color:var(--mute);margin-top:2px}
+.doc-err{font-size:12px;color:var(--err);margin-top:3px}
+.tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.badge{font-family:var(--mono);font-size:10px;line-height:1.6;padding:0 5px;border:1px solid var(--line2);color:var(--dim);background:#12161a;white-space:nowrap}
+.b-from-dense{border-color:#2c4a5e;color:#8fc4de}
+.b-from-sparse{border-color:#4a4326;color:#d8c68a}
+.b-from-both{border-color:var(--accent2);color:var(--accent)}
+.b-modality{border-color:#3a3f52;color:#a7b0d0}
+.b-credibility{border-color:#4a3226;color:#dcae8a}
+.b-status-failed{border-color:#4a2321;color:var(--err)}
+.b-status-pending{border-color:#4a4326;color:var(--warn)}
+.b-ability{border-color:#2f4a3a;color:#8fd8b0}
+.b-feat-on{border-color:#234432;color:var(--ok)}
+.b-feat-off{border-color:var(--line2);color:var(--mute)}
+
+/* ---------- 上传 ---------- */
+.drop{border:1px dashed var(--line2);background:#101315;padding:12px;text-align:center;color:var(--dim);font-size:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px}
+.drop.over{border-color:var(--accent);color:var(--accent)}
+.uploads{display:flex;flex-direction:column;gap:5px;margin-top:6px}
+.upload-row{display:grid;grid-template-columns:1fr 70px 42px;gap:6px;align-items:center;font-size:12px}
+.upload-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim)}
+.upload-status{font-size:11px;color:var(--dim);text-align:right}
+.upload-status.ok{color:var(--ok)}
+.upload-status.err{color:var(--err)}
+.upload-err{grid-column:1/4;font-size:11px;color:var(--err)}
+
+/* ---------- 进度条 ---------- */
+.bar{height:4px;background:#20262b;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);width:0}
+.ingest{margin-top:7px;border:1px solid var(--line);background:#101315;padding:6px}
+.ingest-line{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--dim);margin-bottom:4px}
+.logs{font-size:11px;line-height:1.5;color:#9fb0a8;background:#0b0e10;border:1px solid var(--line);padding:5px;margin:5px 0 0;max-height:150px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+
+/* ---------- 对话 ---------- */
+.chat-panel{display:flex;flex-direction:column}
+.chat-ctl{display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0}
+.messages{display:flex;flex-direction:column;gap:10px;min-height:280px;max-height:58vh;overflow-y:auto;padding-right:2px}
+.msg{display:flex;flex-direction:column;gap:3px;min-width:0}
+.msg-role{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.msg-user .msg-body{border-left:2px solid var(--line2);padding:2px 0 2px 8px;white-space:pre-wrap;word-break:break-word}
+.msg-assistant .msg-body{border-left:2px solid var(--accent2);padding:2px 0 2px 8px}
+.msg-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--mute)}
+.ttft{font-family:var(--mono);color:var(--accent);border:1px solid var(--accent2);padding:0 5px}
+.msg-rewrite{font-size:12px;color:var(--dim);border-left:2px solid var(--warn);padding-left:8px}
+.rw-label{color:var(--warn)}
+.msg-answer{white-space:pre-wrap;word-break:break-word;line-height:1.75}
+.cite-ref{font-family:var(--mono);font-size:12px;color:var(--accent);border:1px solid var(--accent2);padding:0 3px;cursor:pointer}
+.cite-ref:hover{background:var(--accent2);color:#04120e}
+.msg-sites{display:flex;flex-direction:column;gap:4px;margin:2px 0}
+.site-chip{text-align:left;display:flex;flex-direction:column;gap:1px;border-left:2px solid var(--accent2);background:var(--panel2);border-radius:0;border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:4px 7px}
+.site-chip-name{color:var(--accent);font-size:13px}
+.site-chip-meta{font-size:11px;color:var(--mute)}
+.site-chip-sum{font-size:12px;color:var(--dim)}
+.inline-err{font-size:12px;color:#f0c9c7;background:#2a1616;border:1px solid #4a2321;padding:5px 8px;margin-top:4px;white-space:pre-wrap}
+.composer{display:flex;gap:7px;margin-top:9px;align-items:flex-end}
+.composer textarea{flex:1;resize:vertical;min-height:52px;font-family:var(--sans)}
+.composer-side{display:flex;flex-direction:column;gap:5px}
+.composer-foot{font-size:11px;color:var(--mute);margin-top:6px;min-height:16px}
+
+/* ---------- 结构化回答 ---------- */
+.structured-box{border:1px solid var(--line2);background:var(--panel2);margin-top:5px}
+.st-head{display:flex;gap:6px;align-items:center;padding:5px 8px;border-bottom:1px solid var(--line)}
+.st-title{font-size:12px;letter-spacing:.06em;color:var(--accent)}
+.st-sec{border-top:1px solid var(--line);padding:6px 8px}
+.st-sec:first-of-type{border-top:none}
+.st-sec-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:3px}
+.st-sec-body{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.7}
+.st-history .st-sec-body{border-left:2px solid var(--ok);padding-left:8px}
+.st-sources .st-sec-body{border-left:2px solid var(--accent2);padding-left:8px;font-size:12px;color:var(--dim)}
+.st-interp .st-sec-body{border-left:2px solid var(--warn);padding-left:8px;color:#e2d6b6}
+.st-unknown{border-color:#4a4326;color:var(--warn)}
+
+/* ---------- 引用卡片 ---------- */
+.cites{display:flex;flex-direction:column;gap:6px}
+.cite{border:1px solid var(--line);background:var(--panel2)}
+.cite.flash{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent2) inset}
+.cite-head{display:grid;grid-template-columns:28px minmax(0,1fr) auto auto 56px 14px;gap:7px;align-items:center;padding:5px 7px;cursor:pointer}
+.cite-head:hover{background:#1d2226}
+.cite-no{font-size:12px;color:var(--accent)}
+.cite-title{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cite-loc{font-size:11px;color:var(--mute);white-space:nowrap}
+.cite-score{font-size:12px;color:var(--fg)}
+.cite-chev{color:var(--mute);display:inline-flex;transition:transform .12s}
+.cite.open .cite-chev{transform:rotate(90deg)}
+.cite-body{display:none;border-top:1px solid var(--line);padding:7px}
+.cite.open .cite-body{display:block}
+.cite-scores{font-size:11px;color:var(--dim);margin:4px 0}
+.cite-text{white-space:pre-wrap;word-break:break-word;font-size:12.5px;line-height:1.65;border-left:2px solid var(--line2);padding-left:8px}
+.cite-meta{font-size:11px;color:var(--mute);margin-top:4px;word-break:break-all}
+.cite-img img{max-width:100%;display:block;border:1px solid var(--line2);cursor:zoom-in}
+.cite-caption{font-size:12px;color:var(--dim);margin-top:4px;white-space:pre-wrap}
+.tbl-wrap{overflow-x:auto;margin:2px 0}
+table.tbl{border-collapse:collapse;font-size:12px;width:100%}
+table.tbl th,table.tbl td{border:1px solid var(--line2);padding:3px 6px;text-align:left;vertical-align:top}
+table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:nowrap}
+.search-results{max-height:320px;overflow:auto;margin-top:6px}
+
+/* ---------- 景点详情 ---------- */
+.site-item{text-align:left;width:100%;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.site-detail{margin-top:8px;border-top:1px solid var(--line);padding-top:8px;font-size:12.5px}
+.site-detail h3{margin:0 0 4px;font-size:14px;color:var(--accent);font-weight:600}
+.sd-row{display:grid;grid-template-columns:74px minmax(0,1fr);gap:6px;padding:2px 0;border-bottom:1px dotted #1e2429}
+.sd-k{color:var(--mute);font-size:11px;padding-top:2px}
+.sd-v{word-break:break-word;white-space:pre-wrap}
+.sd-sec{margin-top:7px}
+.sd-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:2px}
+
+/* ---------- 灯箱 ---------- */
+.lightbox{position:fixed;inset:0;background:rgba(6,8,9,.92);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;cursor:zoom-out}
+.lightbox img{max-width:96vw;max-height:92vh;border:1px solid var(--line2)}
+</style>
+<script src="/static/integration.js"></script>
+</head>
+<body>
+
+<div id="alert" class="alert" hidden>
+  <span class="ico" id="alert-ico"></span>
+  <span class="txt" id="alert-text"></span>
+  <button class="icon-btn" id="alert-close" title="关闭"></button>
+</div>
+
+<div id="notice-chat" class="notice" hidden>
+  <span class="ico" id="notice-ico"></span>
+  <span class="txt" id="notice-chat-text"></span>
+</div>
+
+<div class="topwrap">
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 6h13M4.5 2.5v11" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+      <span>多模态 RAG 知识库</span>
+      <span class="ver" id="brand-ver">v—</span>
+    </div>
+    <div class="lamps" id="lamps"></div>
+    <div class="metrics" id="metrics"></div>
+    <div class="grow"></div><a href="/static/shuji/" class="primary">进入蜀迹地图</a>
+    <input class="token-input" id="token-input" type="password" placeholder="Bearer token（可选）" autocomplete="off">
+    <button class="primary" id="btn-service-restart" type="button">重启服务</button>
+    <button class="btn" id="btn-service-stop" type="button">停止服务</button>
+    <button class="icon-btn" id="btn-refresh" title="刷新状态"></button>
+  </header>
+  <div class="subbar">
+    <span class="mono" id="cfg-line">配置加载中…</span>
+    <span class="chips" id="cfg-features"></span>
+    <span class="mono" id="stats-line"></span>
+  </div>
+</div>
+
+<main class="layout">
+
+  <section class="panel model-settings">
+    <div class="panel-head"><span>模型与 API 配置</span><span class="mono" id="model-settings-status">读取中…</span></div>
+    <div class="panel-body">
+      <div class="row mb6"><label class="ctl">API 数量模式 <select id="set-api-mode"><option value="two">两个 API：Chat + Vision 共用，Embedding 单独</option><option value="three">三个 API：Chat、Embedding、Vision 分开</option></select></label><span class="muted" id="set-api-mode-hint">两个 API 模式下，Chat 模型必须支持图片输入。</span></div>
+      <div class="model-grid">
+        <div class="model-card">
+          <h3>Chat 对话 API</h3>
+          <div class="grid2">
+            <select id="set-chat-provider"><option value="ollama">本机 Ollama</option><option value="openai">OpenAI 兼容 API</option></select>
+            <input id="set-chat-url" placeholder="Base URL，例如 https://api.deepseek.com/v1">
+            <input id="set-chat-model" placeholder="模型名，例如 deepseek-chat">
+            <input id="set-chat-key" type="password" autocomplete="new-password" placeholder="API Key（留空保留当前密钥）">
+          </div>
+          <label class="ctl mt6"><input id="set-chat-clear" type="checkbox"> 清除已保存密钥</label>
+          <small id="set-chat-key-state">密钥不会回显。</small>
+        </div>
+        <div class="model-card">
+          <h3>Embedding 检索 API</h3>
+          <div class="grid2">
+            <select id="set-embedding-provider"><option value="ollama">本机 Ollama</option><option value="openai">OpenAI 兼容 API</option></select>
+            <input id="set-embedding-url" placeholder="Base URL，例如 http://127.0.0.1:11434">
+            <input id="set-embedding-model" placeholder="模型名，例如 bge-m3:latest">
+            <input id="set-embedding-dim" type="number" min="1" step="1" placeholder="向量维度，例如 1024">
+            <input id="set-embedding-key" type="password" autocomplete="new-password" placeholder="API Key（留空保留当前密钥）">
+          </div>
+          <label class="ctl mt6"><input id="set-embedding-clear" type="checkbox"> 清除已保存密钥</label>
+          <small id="set-embedding-key-state">更换模型或维度后，需清空重建索引。</small>
+        </div>
+        <div class="model-card">
+          <h3>Vision 图片识别 API</h3>
+          <div id="set-vision-separate-fields">
+          <div class="grid2">
+            <label class="ctl"><input id="set-vision-enabled" type="checkbox"> 启用图片识别</label>
+            <select id="set-vision-provider"><option value="ollama">本机 Ollama</option><option value="openai">OpenAI 兼容 API</option></select>
+            <input id="set-vision-url" placeholder="Base URL，例如 http://127.0.0.1:11434">
+            <input id="set-vision-model" placeholder="视觉模型名，例如 qwen2.5vl:latest">
+            <input id="set-vision-key" type="password" autocomplete="new-password" placeholder="API Key（留空保留当前密钥）">
+            <input id="set-recognize-url" placeholder="可选：识别检索服务 URL；留空用视觉模型">
+          </div>
+          <label class="ctl mt6"><input id="set-vision-clear" type="checkbox"> 清除已保存密钥</label>
+          </div>
+          <small id="set-vision-shared-hint" hidden>当前与 Chat 共用服务商、Base URL、模型名和 API Key。请在 Chat 卡配置支持图片输入的模型。</small>
+          <small id="set-vision-key-state">识别检索服务为空时，会由视觉模型识别。</small>
+        </div>
+      </div>
+      <div class="model-actions"><button class="primary" id="btn-model-settings-save">保存 API 配置</button><span class="muted">密钥保存在项目目录的独立本机 .env 文件中。保存后点击顶部“重启服务”使配置生效。</span></div>
+    </div>
+  </section>
+
+  <aside class="col col-left">
+    <section class="panel">
+      <div class="panel-head"><span>资料</span><span class="mono" id="docs-count">0</span></div>
+      <div class="panel-body">
+        <div class="row">
+          <button id="btn-docs-refresh">刷新列表</button>
+          <button id="btn-ingest-inc" class="primary">增量入库</button>
+          <button id="btn-ingest-rebuild" class="danger">清空重建</button>
+        </div>
+        <div class="ingest" id="ingest-box" hidden>
+          <button id="btn-ingest-cancel" class="danger" hidden>取消当前任务</button><div class="ingest-line"><span id="ingest-msg" class="mono">—</span><span id="ingest-pct" class="mono">0%</span></div>
+          <div class="bar"><i id="ingest-bar"></i></div>
+          <pre class="logs mono" id="ingest-logs"></pre>
+        </div>
+        <div class="list mt6" id="docs-list"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><span>上传</span><span class="mono" id="upload-hint">—</span></div>
+      <div class="panel-body">
+        <div class="drop" id="drop">
+          <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path d="M8 10.5V2.5m0 0L5 5.5m3-3 3 3M2.5 10v2.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V10" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>拖拽文件到此处，或点击选择</span>
+          <input type="file" id="file-input" multiple hidden>
+        </div>
+        <div class="grid2">
+          <input id="up-source" placeholder="source 目标路径（可选）">
+          <input id="up-dynasty" placeholder="dynasty 朝代">
+          <input id="up-place" placeholder="place 地点">
+          <input id="up-topic" placeholder="topic 主题">
+          <input id="up-abilities" placeholder="abilities 逗号分隔">
+        </div>
+        <div class="uploads" id="uploads"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><span>景点</span><span class="mono" id="sites-count">0</span></div>
+      <div class="panel-body">
+        <div class="list" id="sites-list"></div>
+        <div class="site-detail" id="site-detail"></div>
+      </div>
+    </section>
+  </aside>
+
+  <section class="col chat-col">
+    <div class="panel chat-panel">
+      <div class="panel-head">
+        <span>对话</span>
+        <span class="chat-ctl">
+          <label class="ctl">top_k <input type="range" id="topk" min="1" max="10" value="4"><b class="mono" id="topk-val">4</b></label>
+          <label class="ctl"><input type="checkbox" id="fmt"> 结构化输出</label>
+          <button class="icon-btn" id="btn-new" title="新会话"></button>
+        </span>
+      </div>
+      <div class="panel-body">
+        <div class="messages" id="messages"></div>
+        <div class="inline-err" id="chat-err" hidden></div>
+        <div class="composer">
+          <textarea id="question" rows="2" placeholder="输入问题，Enter 发送，Shift+Enter 换行"></textarea>
+          <div class="composer-side">
+            <button class="primary" id="btn-send">发送</button>
+            <button class="danger" id="btn-stop" hidden>停止生成</button>
+          </div>
+        </div>
+        <div class="composer-foot mono" id="chat-meta">—</div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="col col-right">
+<section class="panel">
+  <div class="panel-head"><span>拍照识景 / 带图问答</span></div>
+  <div class="panel-body">
+    <input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" multiple aria-label="选择景点照片，最多四张">
+    <img id="photo-preview" alt="已选照片" hidden style="max-width:100%;max-height:220px;margin:12px auto;object-fit:contain">
+    <div id="photo-more" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    <div class="row mt6"><button id="btn-photo-sample">使用武侯祠示例</button><button id="btn-recognize" disabled>识别景点</button><button id="btn-image-chat" disabled>带图提问</button><button id="btn-photo-clear">移除图片</button></div>
+    <p id="photo-result" role="status" aria-live="polite">支持 JPG / PNG / WebP，原图不超过 20 MB。</p>
+  </div>
+</section>
+<section class="panel"><div class="panel-head"><span>最近问答记录</span><button id="btn-traces">刷新</button></div><div class="panel-body" id="trace-list">暂无记录</div></section>
+
+    <section class="panel">
+      <div class="panel-head"><span>引用</span><span class="mono" id="cites-count">0</span></div>
+      <div class="panel-body"><div class="cites" id="citations"></div></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><span>检索调试台</span></div>
+      <div class="panel-body">
+        <div class="row">
+          <input id="q-search" placeholder="检索 query" style="flex:1">
+          <input class="num" id="q-topk" type="number" min="1" max="50" value="6" title="top_k">
+          <button class="primary" id="btn-search">检索</button>
+        </div>
+        <div class="grid2">
+          <select id="f-dynasty"><option value="">朝代 · 全部</option></select>
+          <select id="f-place"><option value="">地点 · 全部</option></select>
+          <select id="f-topic"><option value="">主题 · 全部</option></select>
+          <select id="f-abilities"><option value="">能力 · 全部</option></select>
+        </div>
+        <div class="mono muted mt6" id="search-meta">—</div>
+        <div class="search-results" id="search-results"></div>
+      </div>
+    </section>
+  </aside>
+</main>
+
+<div class="lightbox" id="lightbox" hidden><img id="lightbox-img" alt="引用图片放大预览"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var API = "/api/v1";
+
+  /* 内联 SVG 图标：离线可用，不依赖任何字体或图片资源 */
+  var ICON = {
+    close: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+    warn: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 2.6 14.4 13.4H1.6L8 2.6z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 6.4v3.2M8 11.6v.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+    refresh: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M13.4 8a5.4 5.4 0 1 1-1.6-3.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M13.6 2.6v2.8h-2.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    trash: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3 4.4h10M6.4 4.4V2.9h3.2v1.5M4.6 4.4l.6 8.3h5.6l.6-8.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    chevron: '<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M5.8 3.4 10.4 8l-4.6 4.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    plus: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>'
+  };
+
+  /* 错误码中文释义，把非 0 code 讲成人话 */
+  var CODE_HINT = {
+    40001: "参数校验失败",
+    40100: "未认证或 token 错误",
+    40300: "无权限",
+    40400: "资源不存在",
+    40900: "状态冲突（如入库任务已在运行）",
+    42900: "触发限流，请稍后重试",
+    50000: "服务内部错误",
+    50200: "上游模型服务错误（Ollama / Chat API）",
+    50300: "依赖未就绪（模型缺失或索引为空）"
+  };
+
+  var state = {
+    config: null, health: null, stats: null,
+    docs: [], sites: [],
+    history: [], sessionId: "",
+    topK: 4, answerFormat: "text", streamEnabled: true,
+    maxMb: 32, accept: [],
+    streaming: false, controller: null,
+    jobId: "", polling: false, pollTimer: null,
+    activeTurnId: "", seq: 0
+  };
+  var turns = {};
+
+  /* ---------------- 通用工具 ---------------- */
+  function $(id) { return document.getElementById(id); }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined && text !== null) n.textContent = String(text);
+    return n;
+  }
+
+  function esc(s) {
+    return String(s === undefined || s === null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function fmtBytes(n) {
+    var v = Number(n);
+    if (!isFinite(v) || v < 0) return "—";
+    if (v < 1024) return v + " B";
+    if (v < 1024 * 1024) return (v / 1024).toFixed(1) + " KB";
+    return (v / 1024 / 1024).toFixed(2) + " MB";
+  }
+
+  function fmtTime(iso) {
+    if (!iso) return "—";
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    function p(x) { return (x < 10 ? "0" : "") + x; }
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " +
+      p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+
+  function fmt3(n) {
+    var v = Number(n);
+    return isFinite(v) ? v.toFixed(3) : "—";
+  }
+
+  function barPct(n) {
+    var v = Number(n);
+    if (!isFinite(v)) return "0%";
+    v = Math.max(0, Math.min(1, v));
+    return (v * 100).toFixed(1) + "%";
+  }
+
+  function clampInt(v, lo, hi, dflt) {
+    var n = parseInt(v, 10);
+    if (!isFinite(n)) n = dflt;
+    return Math.max(lo, Math.min(hi, n));
+  }
+
+  function randHex(len) {
+    var s = "", chars = "0123456789abcdef";
+    for (var i = 0; i < len; i++) s += chars.charAt(Math.floor(Math.random() * 16));
+    return s;
+  }
+
+  function basename(p) {
+    var s = String(p || "");
+    var i = Math.max(s.lastIndexOf("/"), s.lastIndexOf("\\"));
+    return i >= 0 ? s.slice(i + 1) : s;
+  }
+
+  function badge(text, kind) {
+    return el("span", "badge" + (kind ? " b-" + kind : ""), text);
+  }
+
+  /* token 只存浏览器本地，服务端不回传 */
+  function getToken() {
+    try { return localStorage.getItem("rag_token") || ""; } catch (e) { return ""; }
+  }
+  function setToken(v) {
+    try { if (v) localStorage.setItem("rag_token", v); else localStorage.removeItem("rag_token"); } catch (e) { /* 隐私模式下忽略 */ }
+  }
+
+  /* ---------------- 错误与网络封装 ---------------- */
+  function ApiError(message, code, requestId) {
+    this.name = "ApiError";
+    this.message = message || "请求失败";
+    this.code = code || 0;
+    this.requestId = requestId || "";
+  }
+  ApiError.prototype = Object.create(Error.prototype);
+
+  function describeError(e) {
+    if (e && e.name === "ApiError") {
+      var hint = CODE_HINT[e.code];
+      var s = e.message || hint || "请求失败";
+      if (e.code && hint && hint !== e.message) s += "（code " + e.code + " · " + hint + "）";
+      else if (e.code) s += "（code " + e.code + "）";
+      if (e.requestId) s += " · request_id " + e.requestId;
+      if (e.code === 40100) s += " · 可在顶部 Token 框填入服务端 server.auth_token";
+      return s;
+    }
+    return "请求失败：" + (e && e.message ? e.message : String(e));
+  }
+
+  /* 统一请求：自动带 Authorization、解析信封、非 0 code 抛错 */
+  function api(path, opts) {
+    var o = opts || {};
+    var headers = {};
+    var k;
+    for (k in (o.headers || {})) headers[k] = o.headers[k];
+    var token = getToken();
+    if (token) headers["Authorization"] = "Bearer " + token;
+    var body = o.body;
+    if (body !== undefined && body !== null && !(body instanceof FormData)) {
+      headers["Content-Type"] = "application/json";
+      if (typeof body !== "string") body = JSON.stringify(body);
+    }
+    return fetch(API + path, {
+      method: o.method || "GET",
+      headers: headers,
+      body: body,
+      signal: o.signal
+    }).catch(function (e) {
+      if (e && e.name === "AbortError") throw e;
+      throw new ApiError("网络请求失败：无法连接后端 " + API + "（" + (e && e.message ? e.message : "未知错误") + "）", 0);
+    }).then(function (res) {
+      var rid = res.headers.get("X-Request-Id") || "";
+      return res.text().catch(function () { return ""; }).then(function (text) {
+        var env = null;
+        if (text) { try { env = JSON.parse(text); } catch (e2) { env = null; } }
+        if (!res.ok) {
+          var msg = env && env.message ? env.message : ("HTTP " + res.status + " " + (res.statusText || "请求失败"));
+          throw new ApiError(msg, env && env.code ? env.code : res.status, (env && env.request_id) || rid);
+        }
+        if (!env) throw new ApiError("响应不是合法的 JSON 信封（缺少 code/data）", 50000, rid);
+        if (env.code !== 0) throw new ApiError(env.message || "业务错误", env.code, env.request_id || rid);
+        return env.data;
+      });
+    });
+  }
+
+  /* SSE 分块解析：按 \n\n 切块，只处理完整块，流结束再兜底残留块 */
+  function parseSSEBlock(block) {
+    if (!block || !block.trim()) return null;
+    var event = "message", data = "";
+    var lines = block.split("\n");
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].replace(/\r$/, "");
+      if (line.charAt(0) === ":") continue; /* 15s 保活 ping 注释行 */
+      if (line.indexOf("event:") === 0) event = line.slice(6).trim();
+      else if (line.indexOf("data:") === 0) data += (data ? "\n" : "") + line.slice(5).replace(/^ /, "");
+    }
+    if (!data) return null;
+    var obj;
+    try { obj = JSON.parse(data); } catch (e) { return null; }
+    return { event: event, data: obj };
+  }
+
+  /* 流式问答：fetch + ReadableStream（不用 EventSource：它只支持 GET，带不了 body 与 Authorization） */
+  function sse(body, onEvent, signal) {
+    var headers = { "Content-Type": "application/json", "Accept": "text/event-stream" };
+    var token = getToken();
+    if (token) headers["Authorization"] = "Bearer " + token;
+    return fetch(API + "/chat", {
+      method: "POST", headers: headers, body: JSON.stringify(body), signal: signal
+    }).catch(function (e) {
+      if (e && e.name === "AbortError") return null;
+      throw new ApiError("网络请求失败：无法连接 " + API + "/chat（" + (e && e.message ? e.message : "未知错误") + "）", 0);
+    }).then(function (res) {
+      if (!res) return null;
+      if (!res.ok || !res.body) {
+        return res.text().catch(function () { return ""; }).then(function (text) {
+          var env = null;
+          if (text) { try { env = JSON.parse(text); } catch (e2) { env = null; } }
+          var msg = env && env.message ? env.message : ("HTTP " + res.status + " " + (res.statusText || "请求失败"));
+          throw new ApiError(msg, env && env.code ? env.code : res.status, res.headers.get("X-Request-Id") || "");
+        });
+      }
+      var reader = res.body.getReader();
+      var dec = new TextDecoder("utf-8");
+      var buf = "";
+      var terminal = false;
+      function emitParsed(parsed) {
+        if (!parsed) return;
+        if (parsed.event === 'done' || parsed.event === 'error') terminal = true;
+        onEvent(parsed.event, parsed.data);
+      }
+      function pump() {
+        return reader.read().then(function (part) {
+          if (part.done) {
+            buf += dec.decode();
+            if (buf.trim()) {
+              var tail = parseSSEBlock(buf);
+              emitParsed(tail);
+            }
+            if (!terminal && !(signal && signal.aborted)) throw new Error('服务端未发送完成事件，回答可能不完整');
+            return null;
+          }
+          buf += dec.decode(part.value, { stream: true });
+          var blocks = buf.split(/\r?\n\r?\n/);
+          buf = blocks.pop();
+          for (var i = 0; i < blocks.length; i++) {
+            var parsed = parseSSEBlock(blocks[i]);
+            emitParsed(parsed);
+          }
+          return pump();
+        });
+      }
+      return pump().catch(function (e) {
+        if (signal && signal.aborted) return null;
+        throw new ApiError("流式连接中断：" + (e && e.message ? e.message : "读取失败"), 0);
+      });
+    });
+  }
+
+  /* ---------------- 顶部提示 ---------------- */
+  function showAlert(msg, kind) {
+    var box = $("alert");
+    box.className = "alert" + (kind === "warn" ? " notice" : "") + (kind === "ok" ? " ok" : "");
+    $("alert-ico").innerHTML = kind === "ok" ? ICON.check : ICON.warn;
+    $("alert-text").textContent = msg;
+    box.hidden = false;
+  }
+  function clearAlert() { $("alert").hidden = true; }
+
+  function showNotice(text) {
+    $("notice-ico").innerHTML = ICON.warn;
+    $("notice-chat-text").textContent = text;
+    $("notice-chat").hidden = false;
+  }
+  function hideNotice() { $("notice-chat").hidden = true; }
+
+  function showChatError(msg) {
+    $("chat-err").textContent = msg;
+    $("chat-err").hidden = false;
+  }
+  function clearChatError() { $("chat-err").hidden = true; }
+
+  /* ---------------- 健康 / 配置 / 统计 ---------------- */
+  function renderHealth(h) {
+    state.health = h;
+    var lamps = $("lamps");
+    lamps.innerHTML = "";
+    [["embedding", "嵌入"], ["chat", "对话"], ["vision", "视觉"]].forEach(function (d) {
+      var dep = h[d[0]] || {};
+      var lamp = el("span", "lamp " + (dep.ok ? "on" : "off"));
+      lamp.appendChild(el("i", "dot"));
+      lamp.appendChild(el("span", "lamp-name", d[1]));
+      lamp.appendChild(el("span", "lamp-model mono", dep.model || "—"));
+      lamp.title = (dep.provider || "—") + " / " + (dep.model || "—") + (dep.detail ? " · " + dep.detail : "");
+      lamps.appendChild(lamp);
+    });
+    var idx = h.index || {};
+    var metrics = $("metrics");
+    metrics.innerHTML = "";
+    [["索引块", idx.chunks], ["文档", idx.docs], ["backend", idx.backend], ["status", h.status], ["uptime", h.uptime_s != null ? h.uptime_s + "s" : "—"]]
+      .forEach(function (m) {
+        var s = el("span", null, m[0] + " ");
+        s.appendChild(el("b", null, m[1] === undefined || m[1] === null ? "—" : String(m[1])));
+        metrics.appendChild(s);
+      });
+
+    var chat = h.chat || {}, emb = h.embedding || {}, vis = h.vision || {};
+    var tips = [];
+    if (!chat.ok) {
+      tips.push("对话模型未就绪（" + (chat.detail || chat.model || "未配置") + "）：在服务端 configs/config.yaml 填 chat.api_key（或设环境变量 RAG_CHAT_API_KEY）后重启服务即可问答。");
+    }
+    if (!emb.ok) {
+      tips.push("嵌入模型未就绪（" + (emb.detail || emb.model || "未连接") + "）：请确认本地 Ollama 已启动并已拉取 " + (emb.model || "bge-m3") + "（ollama pull " + (emb.model || "bge-m3") + "）。");
+    }
+    if (!vis.ok && vis.detail && vis.detail !== "未启用") {
+      tips.push("视觉模型不可用（" + vis.detail + "）：图片资料的图注/OCR 会缺失，文本检索不受影响。");
+    }
+    if (tips.length) showNotice(tips.join(" "));
+    else hideNotice();
+  }
+
+  function renderHealthOffline() {
+    var lamps = $("lamps");
+    lamps.innerHTML = "";
+    ["嵌入", "对话", "视觉"].forEach(function (name) {
+      var lamp = el("span", "lamp off");
+      lamp.appendChild(el("i", "dot"));
+      lamp.appendChild(el("span", "lamp-name", name));
+      lamp.appendChild(el("span", "lamp-model mono", "—"));
+      lamps.appendChild(lamp);
+    });
+    $("metrics").textContent = "后端不可达";
+    showNotice("后端服务不可达：请先启动 Go 服务（默认 http://127.0.0.1:8080）；本页面为纯静态单文件，断网也能打开。");
+  }
+
+  function renderConfig(cfg) {
+    state.config = cfg;
+    $("brand-ver").textContent = "v" + (cfg.version || "—");
+    var up = cfg.upload || {}, ret = cfg.retrieval || {}, ch = cfg.chunking || {}, feat = cfg.features || {};
+    state.accept = up.accept || [];
+    state.maxMb = up.max_mb || 32;
+    $("file-input").setAttribute("accept", state.accept.join(","));
+    $("upload-hint").textContent = "≤ " + state.maxMb + " MB · " + state.accept.join(" ");
+
+    state.topK = clampInt(ret.top_k, 1, 10, 4);
+    $("topk").value = String(state.topK);
+    $("topk-val").textContent = String(state.topK);
+    $("q-topk").value = String(clampInt(ret.top_k, 1, 20, 6));
+
+    state.streamEnabled = feat.stream !== false;
+    $("fmt").disabled = feat.structured_answer === false;
+    if (feat.structured_answer === false) $("fmt").checked = false;
+
+    $("cfg-line").textContent = "top_k " + (ret.top_k != null ? ret.top_k : "—") +
+      " · fusion " + (ret.fusion || "—") +
+      " · alpha " + (ret.hybrid_alpha != null ? ret.hybrid_alpha : "—") +
+      " · chunk " + (ch.size != null ? ch.size : "—") + "/" + (ch.overlap != null ? ch.overlap : "—") +
+      " · 上传上限 " + state.maxMb + " MB";
+
+    var chips = $("cfg-features");
+    chips.innerHTML = "";
+    Object.keys(feat).forEach(function (k) {
+      chips.appendChild(badge(k + (feat[k] ? " 开" : " 关"), feat[k] ? "feat-on" : "feat-off"));
+    });
+    if (cfg.auth_required) $("token-input").placeholder = "需要认证：填入 auth_token";
+  }
+
+  function fillSelect(id, values, label) {
+    var sel = $(id);
+    if (!sel) return;
+    var cur = sel.value;
+    sel.innerHTML = "";
+    var o0 = el("option", null, label);
+    o0.value = "";
+    sel.appendChild(o0);
+    (values || []).forEach(function (v) {
+      var o = el("option", null, v);
+      o.value = v;
+      sel.appendChild(o);
+    });
+    if (cur) sel.value = cur;
+  }
+
+  function renderStats(s) {
+    state.stats = s;
+    var facets = s.facets || {};
+    fillSelect("f-dynasty", facets.dynasty, "朝代 · 全部");
+    fillSelect("f-place", facets.place, "地点 · 全部");
+    fillSelect("f-topic", facets.topic, "主题 · 全部");
+    fillSelect("f-abilities", facets.abilities, "能力 · 全部");
+    var m = s.modalities || {};
+    $("stats-line").textContent = "模态 text " + (m.text || 0) + " / table " + (m.table || 0) + " / image " + (m.image || 0) +
+      " · 资产 " + (s.assets || 0) + " · " + (s.backend || "—") + " · " + (s.data_dir || "—");
+  }
+
+  /* ---------------- 数据拉取 ---------------- */
+  function refreshHealth(silent) {
+    return api("/health").then(function (h) {
+      renderHealth(h);
+    }).catch(function (e) {
+      renderHealthOffline();
+      if (!silent) showAlert("健康检查失败：" + describeError(e), "err");
+    });
+  }
+
+  function refreshConfig() {
+    return api("/config").then(renderConfig).catch(function (e) {
+      showAlert("读取配置失败：" + describeError(e), "err");
+    });
+  }
+
+  function refreshStats() {
+    return api("/stats").then(renderStats).catch(function (e) {
+      $("stats-line").textContent = "统计加载失败：" + describeError(e);
+    });
+  }
+
+  function refreshDocuments() {
+    return api("/documents").then(function (data) {
+      state.docs = (data && data.documents) || [];
+      renderDocuments();
+    }).catch(function (e) {
+      var box = $("docs-list");
+      box.innerHTML = "";
+      box.appendChild(el("div", "muted", "文档列表加载失败：" + describeError(e)));
+      showAlert("文档列表加载失败：" + describeError(e), "err");
+    });
+  }
+
+  function loadSites() {
+    return api("/sites").then(function (data) {
+      state.sites = (data && data.sites) || [];
+      renderSites();
+    }).catch(function (e) {
+      var box = $("sites-list");
+      box.innerHTML = "";
+      box.appendChild(el("div", "muted", "景点列表加载失败：" + describeError(e)));
+      $("sites-count").textContent = "0";
+    });
+  }
+
+
+  ICON.check = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8.6 6.4 12 13 4.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  /* ---------------- 文档列表 ---------------- */
+  function renderDocuments() {
+    var box = $("docs-list");
+    box.innerHTML = "";
+    $("docs-count").textContent = String(state.docs.length);
+    if (!state.docs.length) {
+      box.appendChild(el("div", "muted", "还没有文档。上传资料后点「增量入库」。"));
+      return;
+    }
+    state.docs.forEach(function (doc) {
+      var row = el("div", "doc");
+      var top = el("div", "doc-top");
+      top.appendChild(el("span", "doc-name", doc.source || doc.title || doc.id));
+      top.appendChild(badge(doc.modality || "text", "modality"));
+      var del = el("button", "icon-btn danger");
+      del.title = "删除该文档及其索引";
+      del.innerHTML = ICON.trash;
+      del.addEventListener("click", function () { removeDocument(doc); });
+      top.appendChild(del);
+      row.appendChild(top);
+      if (doc.title && doc.title !== doc.source) row.appendChild(el("div", "doc-sub", doc.title));
+      row.appendChild(el("div", "doc-sub mono", fmtBytes(doc.size) + " · " + (doc.chunks || 0) + " 块 · " + fmtTime(doc.updated_at)));
+      var tags = el("div", "tags");
+      if (doc.status && doc.status !== "indexed") tags.appendChild(badge(doc.status, "status-" + doc.status));
+      ["dynasty", "place", "topic", "source_type", "credibility"].forEach(function (k) {
+        if (doc[k]) tags.appendChild(badge(doc[k], k));
+      });
+      (doc.abilities || []).forEach(function (a) { tags.appendChild(badge(a, "ability")); });
+      (doc.assets || []).forEach(function (a) { tags.appendChild(badge(a, "asset")); });
+      if (tags.childNodes.length) row.appendChild(tags);
+      if (doc.error) row.appendChild(el("div", "doc-err", doc.error));
+      box.appendChild(row);
+    });
+  }
+
+  function removeDocument(doc) {
+    var name = doc.source || doc.title || doc.id;
+    if (!window.confirm("确认删除文档「" + name + "」？\n将移除其索引块与资产文件；docs_dir 中的原文件不会被删除。")) return;
+    api("/documents/" + encodeURIComponent(doc.id), { method: "DELETE" }).then(function (data) {
+      var n = data && data.chunks_removed != null ? data.chunks_removed : 0;
+      showAlert("已删除「" + name + "」，移除索引块 " + n + " 个。", "ok");
+      refreshDocuments();
+      refreshHealth(true);
+      refreshStats();
+    }).catch(function (e) {
+      showAlert("删除失败：" + describeError(e), "err");
+    });
+  }
+
+  /* ---------------- 景点 ---------------- */
+  function renderSites() {
+    var box = $("sites-list");
+    box.innerHTML = "";
+    $("sites-count").textContent = String(state.sites.length);
+    if (!state.sites.length) {
+      box.appendChild(el("div", "muted", "没有景点数据（configs/sites.json 不存在或为空）。"));
+      return;
+    }
+    state.sites.forEach(function (s) {
+      var b = el("button", "site-item");
+      b.appendChild(el("span", null, s.name || s.id));
+      b.appendChild(el("span", "mono muted", [s.dynasty, s.place].filter(Boolean).join(" · ")));
+      b.addEventListener("click", function () { loadSiteDetail(s.id || s.name); });
+      box.appendChild(b);
+    });
+  }
+
+  function loadSiteDetail(id) {
+    var box = $("site-detail");
+    box.innerHTML = "";
+    box.appendChild(el("div", "muted", "加载中…"));
+    api("/sites/" + encodeURIComponent(id)).then(function (site) {
+      renderSiteDetail(site);
+    }).catch(function (e) {
+      box.innerHTML = "";
+      box.appendChild(el("div", "muted", "景点加载失败：" + describeError(e)));
+      showAlert("景点加载失败：" + describeError(e), "err");
+    });
+  }
+
+  function renderSiteDetail(site) {
+    var box = $("site-detail");
+    box.innerHTML = "";
+    box.appendChild(el("h3", null, site.name || site.id));
+    function row(k, v) {
+      if (v === undefined || v === null || v === "") return;
+      var r = el("div", "sd-row");
+      r.appendChild(el("div", "sd-k", k));
+      r.appendChild(el("div", "sd-v", String(v)));
+      box.appendChild(r);
+    }
+    row("id", site.id);
+    row("别名", (site.aliases || []).join("、"));
+    row("朝代", site.dynasty);
+    row("地点", site.place);
+    row("主题", site.topic);
+    row("能力", site.ability);
+    row("坐标", (site.lat != null && site.lng != null) ? site.lat + ", " + site.lng : "");
+    row("标签", (site.tags || []).join("、"));
+    row("简介", site.summary);
+    if (site.description) {
+      var sec = el("div", "sd-sec");
+      sec.appendChild(el("div", "sd-label", "描述"));
+      sec.appendChild(el("div", "sd-v", site.description));
+      box.appendChild(sec);
+    }
+    var facts = site.facts || {};
+    var keys = Object.keys(facts);
+    if (keys.length) {
+      var fsec = el("div", "sd-sec");
+      fsec.appendChild(el("div", "sd-label", "史实"));
+      var table = el("table", "tbl");
+      var tb = el("tbody");
+      keys.forEach(function (k) {
+        var tr = el("tr");
+        tr.appendChild(el("th", null, k));
+        tr.appendChild(el("td", null, String(facts[k])));
+        tb.appendChild(tr);
+      });
+      table.appendChild(tb);
+      fsec.appendChild(table);
+      box.appendChild(fsec);
+    }
+    if (site.interpretation) {
+      var isec = el("div", "sd-sec");
+      isec.appendChild(el("div", "sd-label", "演绎说明"));
+      isec.appendChild(el("div", "sd-v", site.interpretation));
+      box.appendChild(isec);
+    }
+    var srcs = site.sources || [];
+    if (srcs.length) {
+      var ssec = el("div", "sd-sec");
+      ssec.appendChild(el("div", "sd-label", "资料来源"));
+      srcs.forEach(function (s) {
+        ssec.appendChild(el("div", "sd-v", "· " + (s.title || "—") + (s.license ? "（" + s.license + "）" : "")));
+      });
+      box.appendChild(ssec);
+    }
+  }
+
+  /* ---------------- 引用卡片 ---------------- */
+  function showCitations(turn, highlightN) {
+    var box = $("citations");
+    if (state.activeTurnId !== turn.id) {
+      state.activeTurnId = turn.id;
+      box.innerHTML = "";
+      var list = turn.sources || [];
+      $("cites-count").textContent = String(list.length);
+      if (!list.length) {
+        box.appendChild(el("div", "muted", "本轮没有命中引用。"));
+        return;
+      }
+      list.forEach(function (hit, i) { box.appendChild(citationCard(turn, hit, i)); });
+    }
+    if (highlightN) flashCitation(turn.id, highlightN);
+  }
+
+  function flashCitation(turnId, n) {
+    var card = document.getElementById("cite-" + turnId + "-" + n);
+    if (!card) return;
+    card.classList.add("open");
+    card.classList.add("flash");
+    card.scrollIntoView({ block: "center", behavior: "smooth" });
+    window.setTimeout(function () { card.classList.remove("flash"); }, 1600);
+  }
+
+  function jumpToCitation(turnId, n) {
+    var turn = turns[turnId];
+    if (!turn) return;
+    showCitations(turn, n);
+  }
+
+  function citationCard(turn, hit, i) {
+    var n = i + 1;
+    var c = hit.chunk || {};
+    var card = el("div", "cite");
+    card.id = "cite-" + turn.id + "-" + n;
+
+    var head = el("div", "cite-head");
+    head.appendChild(el("span", "cite-no mono", "[" + n + "]"));
+    head.appendChild(el("span", "cite-title", basename(c.source) || "（无来源）"));
+    head.appendChild(el("span", "cite-loc mono", "· " + (c.locator || (c.index != null ? "块 " + c.index : "—"))));
+    head.appendChild(el("span", "cite-score mono", "· " + fmt3(hit.score)));
+    var bar = el("span", "bar");
+    var fill = el("i");
+    fill.style.width = barPct(hit.score);
+    bar.appendChild(fill);
+    head.appendChild(bar);
+    var chev = el("span", "cite-chev");
+    chev.innerHTML = ICON.chevron;
+    head.appendChild(chev);
+    card.appendChild(head);
+
+    var body = el("div", "cite-body");
+    var tags = el("div", "tags");
+    tags.appendChild(badge("from " + (hit.from || "—"), "from-" + (hit.from || "none")));
+    if (c.modality) tags.appendChild(badge(c.modality, "modality"));
+    ["dynasty", "place", "topic", "credibility"].forEach(function (k) {
+      if (c[k]) tags.appendChild(badge(c[k], k));
+    });
+    (c.abilities || []).forEach(function (a) { tags.appendChild(badge(a, "ability")); });
+    body.appendChild(tags);
+    body.appendChild(el("div", "cite-scores mono",
+      "score " + fmt3(hit.score) + " · dense " + fmt3(hit.dense_score) + " · sparse " + fmt3(hit.sparse_score) +
+      " · rank " + (hit.rank != null ? hit.rank : n) + " · " + (c.source || "—")));
+
+    if (c.modality === "table") body.appendChild(renderTable(c.text));
+    else if (c.modality === "image") body.appendChild(renderImage(c));
+    else body.appendChild(el("div", "cite-text", c.text || "（无文本）"));
+
+    var mk = c.meta ? Object.keys(c.meta) : [];
+    if (mk.length) {
+      var metaText = mk.map(function (k) { return k + "=" + c.meta[k]; }).join("  ");
+      body.appendChild(el("div", "cite-meta mono", metaText));
+    }
+    card.appendChild(body);
+    head.addEventListener("click", function () { card.classList.toggle("open"); });
+    return card;
+  }
+
+  /* modality=table：text 按行 \n、列 " | " 拆成真正的 <table> */
+  function renderTable(text) {
+    var wrap = el("div", "tbl-wrap");
+    var table = el("table", "tbl");
+    var rows = String(text || "").split("\n").filter(function (r) { return r.trim() !== ""; });
+    if (!rows.length) {
+      wrap.appendChild(el("div", "muted", "（空表格）"));
+      return wrap;
+    }
+    var first = rows.shift().split(" | ");
+    var thead = el("thead");
+    var trh = el("tr");
+    first.forEach(function (cell) { trh.appendChild(el("th", null, cell.trim())); });
+    thead.appendChild(trh);
+    table.appendChild(thead);
+    var tbody = el("tbody");
+    rows.forEach(function (r) {
+      var tr = el("tr");
+      r.split(" | ").forEach(function (cell) { tr.appendChild(el("td", null, cell.trim())); });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    return wrap;
+  }
+
+  /* modality=image：asset_url 直接进 <img>，点击放大 */
+  function renderImage(c) {
+    var fig = el("div", "cite-img");
+    if (!c.asset_url) {
+      fig.appendChild(el("div", "muted", "（缺 asset_url，无法显示图片）"));
+    } else {
+      var img = el("img");
+      img.loading = "lazy";
+      loadProtectedImage(img, c.asset_url);
+      img.alt = c.text ? String(c.text).slice(0, 80) : "引用图片";
+      img.addEventListener("click", function () { openLightbox(c.asset_url); });
+      img.addEventListener("error", function () {
+        img.hidden = true;
+        fig.appendChild(el("div", "muted", "图片加载失败：" + c.asset_url));
+      });
+      fig.appendChild(img);
+    }
+    fig.appendChild(el("div", "cite-caption", c.text || "（无图注）"));
+    return fig;
+  }
+
+  function openLightbox(url) {
+    loadProtectedImage($("lightbox-img"), url);
+    $("lightbox").hidden = false;
+  }
+
+  function loadProtectedImage(img, url) {
+    var target = new URL(url, location.href);
+    if (!getToken() || target.origin !== location.origin || !target.pathname.startsWith('/api/v1/assets/')) { img.src = target.href; return; }
+    fetch(target.href, {headers:{Authorization:'Bearer ' + getToken()}}).then(function(response) {
+      if (!response.ok) throw new Error('图片请求失败'); return response.blob();
+    }).then(function(blob) {
+      var objectUrl = URL.createObjectURL(blob);
+      img.addEventListener('load',function() { URL.revokeObjectURL(objectUrl); },{once:true});
+      img.src = objectUrl;
+    }).catch(function() { img.dispatchEvent(new Event('error')); });
+  }
+  function closeLightbox() {
+    $("lightbox").hidden = true;
+    $("lightbox-img").removeAttribute("src");
+  }
+
+  /* ---------------- 结构化回答 ---------------- */
+  function renderStructuredCard(turn, st) {
+    var box = turn.structuredEl;
+    box.hidden = false;
+    box.innerHTML = "";
+    var head = el("div", "st-head");
+    head.appendChild(el("span", "st-title", "结构化回答"));
+    if (st.unknown) head.appendChild(badge("知识库未命中", "st-unknown"));
+    if (st.confidence) head.appendChild(badge("confidence " + st.confidence, "modality"));
+    box.appendChild(head);
+    var secs = [
+      ["史实陈述", st.history, "st-history"],
+      ["资料来源", Array.isArray(st.sources) ? st.sources.join("\n") : st.sources, "st-sources"],
+      ["演绎说明", st.interpretation, "st-interp"]
+    ];
+    secs.forEach(function (s) {
+      var sec = el("div", "st-sec " + s[2]);
+      sec.appendChild(el("div", "st-sec-label", s[0]));
+      var bodyEl = el("div", "st-sec-body");
+      var text = s[1] ? String(s[1]) : "（无）";
+      if (s[2] === "st-history") bodyEl.innerHTML = linkify(text, turn.id, (turn.sources || []).length);
+      else bodyEl.textContent = text;
+      sec.appendChild(bodyEl);
+      box.appendChild(sec);
+    });
+  }
+
+  function structuredToText(st) {
+    if (!st) return "";
+    var parts = [st.history];
+    if (st.sources) parts.push(Array.isArray(st.sources) ? st.sources.join("\n") : st.sources);
+    if (st.interpretation) parts.push(st.interpretation);
+    return parts.filter(Boolean).join("\n");
+  }
+
+  /* ---------------- 检索调试台 ---------------- */
+  function renderSearch(data) {
+    var hits = (data && data.hits) || [];
+    var cand = (data && data.candidates) || {};
+    $("search-meta").textContent = "命中 " + hits.length + " 条 · 耗时 " +
+      (data && data.elapsed_ms != null ? data.elapsed_ms : "—") + " ms · 候选 dense " +
+      (cand.dense != null ? cand.dense : "—") + " / sparse " + (cand.sparse != null ? cand.sparse : "—");
+    var box = $("search-results");
+    box.innerHTML = "";
+    if (!hits.length) {
+      box.appendChild(el("div", "muted", "没有命中结果。"));
+      return;
+    }
+    state.searchTurn = { id: "search", sources: hits };
+    var table = el("table", "tbl");
+    var thead = el("thead");
+    var trh = el("tr");
+    ["rank", "score", "dense", "sparse", "from", "来源", "摘要"].forEach(function (h) {
+      trh.appendChild(el("th", null, h));
+    });
+    thead.appendChild(trh);
+    table.appendChild(thead);
+    var tbody = el("tbody");
+    hits.forEach(function (hit, i) {
+      var c = hit.chunk || {};
+      var tr = el("tr");
+      tr.appendChild(el("td", "mono", String(hit.rank != null ? hit.rank : i + 1)));
+      tr.appendChild(el("td", "mono", fmt3(hit.score)));
+      tr.appendChild(el("td", "mono", fmt3(hit.dense_score)));
+      tr.appendChild(el("td", "mono", fmt3(hit.sparse_score)));
+      var tdFrom = el("td");
+      tdFrom.appendChild(badge(hit.from || "—", "from-" + (hit.from || "none")));
+      tr.appendChild(tdFrom);
+      var tdSrc = el("td");
+      var btn = el("button", null, basename(c.source) || "—");
+      btn.title = c.source || "";
+      btn.addEventListener("click", function () { showCitations(state.searchTurn, i + 1); });
+      tdSrc.appendChild(btn);
+      tr.appendChild(tdSrc);
+      tr.appendChild(el("td", null, String(c.text || "").slice(0, 90)));
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    box.appendChild(table);
+  }
+
+  function runSearch() {
+    var query = $("q-search").value.trim();
+    if (!query) {
+      showAlert("检索 query 不能为空。", "warn");
+      return;
+    }
+    var filters = {};
+    [["dynasty", "f-dynasty"], ["place", "f-place"], ["topic", "f-topic"], ["abilities", "f-abilities"]].forEach(function (pair) {
+      var v = $(pair[1]).value;
+      if (v) filters[pair[0]] = [v];
+    });
+    $("search-meta").textContent = "检索中…";
+    api("/search", {
+      method: "POST",
+      body: {
+        query: query,
+        top_k: clampInt($("q-topk").value, 1, 50, 6),
+        filters: filters,
+        abilities: filters.abilities || []
+      }
+    }).then(function (data) {
+      renderSearch(data);
+    }).catch(function (e) {
+      $("search-meta").textContent = "检索失败：" + describeError(e);
+      showAlert("检索失败：" + describeError(e), "err");
+    });
+  }
+
+  /* ---------------- 入库任务 ---------------- */
+  function stopPolling() {
+    state.polling = false;
+    if (state.pollTimer) {
+      window.clearTimeout(state.pollTimer);
+      state.pollTimer = null;
+    }
+  }
+
+  function setIngestProgress(percent, msg) {
+    var p = Number(percent);
+    if (!isFinite(p)) p = 0;
+    p = Math.max(0, Math.min(100, p));
+    $("ingest-bar").style.width = p + "%";
+    $("ingest-pct").textContent = p + "%";
+    if (msg !== undefined && msg !== null) $("ingest-msg").textContent = msg;
+  }
+
+  function jobStatsText(job) {
+    var s = job.stats || {};
+    var parts = [];
+    if (s.files_total != null) parts.push("文件变更 " + (s.files_changed || 0) + "/" + s.files_total);
+    if (s.files_skipped != null) parts.push("跳过 " + s.files_skipped);
+    if (s.chunks_added != null) parts.push("新增块 " + s.chunks_added);
+    if (s.chunks_removed != null) parts.push("移除块 " + s.chunks_removed);
+    if (s.files_failed) parts.push("失败 " + s.files_failed);
+    if (s.assets != null) parts.push("资产 " + s.assets);
+    if (s.elapsed_ms != null) parts.push("耗时 " + s.elapsed_ms + " ms");
+    return parts.length ? parts.join(" · ") : "无统计";
+  }
+
+  function renderJob(job) {
+    $("ingest-box").hidden = false;
+    $("btn-ingest-cancel").hidden = job.status !== "running";
+    var pr = job.progress || {};
+    var percent = pr.percent != null ? pr.percent : (pr.total ? Math.round(pr.current / pr.total * 100) : 0);
+    setIngestProgress(percent, (job.message || job.status || "—") + " · " + (job.job_id || ""));
+    var logs = $("ingest-logs");
+    logs.textContent = (job.logs || []).join("\n");
+    logs.scrollTop = logs.scrollHeight;
+  }
+
+  /* 每 800ms 轮询任务详情，直到 status != running */
+  function startPolling(jobId) {
+    stopPolling();
+    state.jobId = jobId;
+    state.polling = true;
+    $("ingest-box").hidden = false;
+    setIngestProgress(0, "任务 " + jobId + " 已创建，等待进度…");
+    var tick = function () {
+      if (!state.polling) return;
+      api("/ingest/jobs/" + encodeURIComponent(jobId)).then(function (job) {
+        if (!state.polling) return;
+        renderJob(job);
+        if (job.status && job.status !== "running") {
+          stopPolling();
+          if (job.status === "succeeded") showAlert("入库完成：" + jobStatsText(job), "ok");
+          else if (job.status === "failed") showAlert("入库失败：" + (job.error || job.message || "未知原因"), "err");
+          else showAlert("入库任务已取消。", "warn");
+          refreshDocuments();
+          refreshHealth(true);
+          refreshStats();
+          return;
+        }
+        state.pollTimer = window.setTimeout(tick, 800);
+      }).catch(function (e) {
+        stopPolling();
+        showAlert("查询入库进度失败：" + describeError(e), "err");
+      });
+    };
+    tick();
+  }
+
+  function startIngest(mode) {
+    if (state.polling) {
+      showAlert("已有入库任务在运行（" + state.jobId + "），请等它结束后再触发。", "warn");
+      return;
+    }
+    api("/ingest", {
+      method: "POST",
+      body: { mode: mode === "rebuild" ? "full" : mode, paths: [] }
+    }).then(function (data) {
+      $("ingest-logs").textContent = "";
+      showAlert("入库任务已启动：" + (data && data.job_id ? data.job_id : "—"), "ok");
+      if (data && data.job_id) startPolling(data.job_id);
+    }).catch(function (e) {
+      if (e && e.name === "ApiError" && e.code === 40900) {
+        showAlert("已有入库任务在运行，服务端同一时刻只允许一个任务；请等它结束后再试。", "warn");
+      } else {
+        showAlert("触发入库失败：" + describeError(e), "err");
+      }
+    });
+  }
+
+  /* ---------------- 上传（XHR 以拿到 upload.onprogress） ---------------- */
+  function appendIf(fd, key, value) {
+    var v = (value || "").trim();
+    if (v) fd.append(key, v);
+  }
+
+  function checkFile(file) {
+    var name = file.name || "";
+    var dot = name.lastIndexOf(".");
+    var ext = dot >= 0 ? name.slice(dot).toLowerCase() : "";
+    if (state.accept.length && state.accept.indexOf(ext) < 0) {
+      return "文件类型不在允许列表内（" + (ext || name) + "）；允许：" + state.accept.join(" ");
+    }
+    if (file.size > state.maxMb * 1024 * 1024) {
+      return "文件超过上传上限 " + state.maxMb + " MB（当前 " + fmtBytes(file.size) + "）";
+    }
+    return "";
+  }
+
+  function uploadOne(file) {
+    return new Promise(function (resolve) {
+      var row = el("div", "upload-row");
+      var bar = el("div", "bar");
+      var fill = el("i");
+      bar.appendChild(fill);
+      var status = el("div", "upload-status mono", "0%");
+      row.appendChild(el("div", "upload-name", file.name));
+      row.appendChild(bar);
+      row.appendChild(status);
+      $("uploads").appendChild(row);
+
+      var bad = checkFile(file);
+      if (bad) {
+        status.textContent = "拒绝";
+        status.className = "upload-status mono err";
+        row.appendChild(el("div", "upload-err", bad));
+        showAlert("未上传 " + file.name + "：" + bad, "warn");
+        resolve();
+        return;
+      }
+
+      var fd = new FormData();
+      fd.append("file", file);
+      fd.append("source", $("up-source").value.trim() || file.name);
+      fd.append("ingest", "false");
+      appendIf(fd, "dynasty", $("up-dynasty").value);
+      appendIf(fd, "place", $("up-place").value);
+      appendIf(fd, "topic", $("up-topic").value);
+      appendIf(fd, "abilities", $("up-abilities").value);
+
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", API + "/assets");
+      var token = getToken();
+      if (token) xhr.setRequestHeader("Authorization", "Bearer " + token);
+      xhr.upload.onprogress = function (e) {
+        if (e.lengthComputable) {
+          var p = Math.round(e.loaded / e.total * 100);
+          fill.style.width = p + "%";
+          status.textContent = p + "%";
+        }
+      };
+      xhr.onload = function () {
+        var env = null;
+        try { env = JSON.parse(xhr.responseText); } catch (e2) { env = null; }
+        if (xhr.status >= 200 && xhr.status < 300 && env && env.code === 0) {
+          fill.style.width = "100%";
+          status.textContent = "完成";
+          status.className = "upload-status mono ok";
+          var jobId = env.data && env.data.job_id;
+          showAlert("已上传 " + file.name + "，全部文件上传后统一入库。", "ok");
+          if (jobId) startPolling(jobId);
+          refreshDocuments();
+          refreshHealth(true);
+          refreshStats();
+        } else {
+          status.textContent = "失败";
+          status.className = "upload-status mono err";
+          var msg = env && env.message ? env.message : ("HTTP " + xhr.status + " " + (xhr.statusText || "请求失败"));
+          row.appendChild(el("div", "upload-err", msg));
+          showAlert("上传失败（" + file.name + "）：" + msg, "err");
+        }
+        resolve();
+      };
+      xhr.onerror = function () {
+        status.textContent = "失败";
+        status.className = "upload-status mono err";
+        row.appendChild(el("div", "upload-err", "网络错误：无法连接 " + API + "/assets"));
+        showAlert("上传失败（" + file.name + "）：网络错误，无法连接 " + API + "/assets", "err");
+        resolve();
+      };
+      xhr.onabort = function () {
+        status.textContent = "已取消";
+        resolve();
+      };
+      xhr.send(fd);
+    });
+  }
+
+  function uploadFiles(files) {
+    var list = Array.prototype.slice.call(files || []);
+    if (!list.length) return Promise.resolve();
+    if (list.length > 1 && $("up-source").value.trim()) { showAlert('批量上传时请清空目标路径，每个文件使用自己的文件名。','warn'); return Promise.resolve(); }
+    var chain = Promise.resolve();
+    list.forEach(function (f) {
+      chain = chain.then(function () { return uploadOne(f); });
+    });
+    return chain.then(function () { startIngest("incremental"); });
+  }
+
+  /* ---------------- 对话 ---------------- */
+  /* 把答案正文里的 [1][2] 变成可点击的引用锚点 */
+  function linkify(text, turnId, maxN) {
+    var safe = esc(text);
+    var limit = maxN > 0 ? maxN : 0;
+    return safe.replace(/\[(\d{1,2})\]/g, function (m, d) {
+      var n = parseInt(d, 10);
+      if (!(n >= 1 && n <= limit)) return m;
+      return '<a class="cite-ref" role="button" tabindex="0" data-turn="' + turnId + '" data-n="' + n + '">[' + n + ']</a>';
+    });
+  }
+
+  function scrollMessages() {
+    var box = $("messages");
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function createTurn(question) {
+    state.seq += 1;
+    var id = "t" + state.seq;
+
+    var userWrap = el("div", "msg msg-user");
+    userWrap.appendChild(el("div", "msg-role", "我"));
+    userWrap.appendChild(el("div", "msg-body", question));
+    $("messages").appendChild(userWrap);
+
+    var wrap = el("div", "msg msg-assistant");
+    var meta = el("div", "msg-meta");
+    var ttft = el("span", "ttft");
+    ttft.hidden = true;
+    var metaText = el("span", "mono", "进行中…");
+    meta.appendChild(ttft);
+    meta.appendChild(metaText);
+    var rewrite = el("div", "msg-rewrite");
+    rewrite.hidden = true;
+    var sites = el("div", "msg-sites");
+    sites.hidden = true;
+    var bodyEl = el("div", "msg-answer");
+    var structuredEl = el("div", "structured-box");
+    structuredEl.hidden = true;
+    var errEl = el("div", "inline-err");
+    errEl.hidden = true;
+
+    wrap.appendChild(el("div", "msg-role", "知识库"));
+    wrap.appendChild(meta);
+    wrap.appendChild(rewrite);
+    wrap.appendChild(sites);
+    wrap.appendChild(bodyEl);
+    wrap.appendChild(structuredEl);
+    wrap.appendChild(errEl);
+    $("messages").appendChild(wrap);
+    scrollMessages();
+
+    var turn = {
+      id: id, question: question, raw: "", sources: [], sites: [],
+      el: wrap, userEl: userWrap, bodyEl: bodyEl, structuredEl: structuredEl, errEl: errEl,
+      ttftEl: ttft, metaTextEl: metaText, rewriteEl: rewrite, sitesEl: sites,
+      t0: 0, clientTtft: null, done: null, structured: null, requestId: "", model: ""
+    };
+    turns[id] = turn;
+    return turn;
+  }
+
+  function setRewrite(turn, text) {
+    turn.rewriteEl.hidden = false;
+    turn.rewriteEl.innerHTML = "";
+    turn.rewriteEl.appendChild(el("span", "rw-label", "已改写为："));
+    turn.rewriteEl.appendChild(el("span", "rw-text", text));
+  }
+
+  function renderTurnSites(turn, sites) {
+    turn.sites = sites || [];
+    turn.sitesEl.hidden = false;
+    turn.sitesEl.innerHTML = "";
+    if (!turn.sites.length) return;
+    turn.sitesEl.appendChild(el("div", "msg-role", "景点命中"));
+    turn.sites.forEach(function (s) {
+      var chip = el("button", "site-chip");
+      chip.type = "button";
+      chip.appendChild(el("span", "site-chip-name", s.name || s.id || "—"));
+      var meta = [s.dynasty, s.place, s.topic].filter(Boolean).join(" · ");
+      if (meta) chip.appendChild(el("span", "site-chip-meta mono", meta));
+      if (s.summary) chip.appendChild(el("span", "site-chip-sum", s.summary));
+      chip.addEventListener("click", function () { loadSiteDetail(s.id || s.name); });
+      turn.sitesEl.appendChild(chip);
+    });
+  }
+
+  function renderAnswer(turn) {
+    if (turn.structured) return;
+    turn.bodyEl.innerHTML = linkify(turn.raw || "", turn.id, (turn.sources || []).length);
+    scrollMessages();
+  }
+
+  /* 首字延迟：从发出请求到第一个 token 到达 */
+  function markTtft(turn) {
+    if (turn.clientTtft != null || !turn.t0) return;
+    turn.clientTtft = Math.round(performance.now() - turn.t0);
+    turn.ttftEl.textContent = "首字延迟 " + turn.clientTtft + " ms";
+    turn.ttftEl.hidden = false;
+  }
+
+  function handleEvent(turn, ev, data) {
+    if (ev === "meta") {
+      turn.requestId = data.request_id || "";
+      turn.model = data.model || "";
+      if (data.rewritten_question && data.rewritten_question !== turn.question) {
+        setRewrite(turn, data.rewritten_question);
+      }
+    } else if (ev === "sites") {
+      renderTurnSites(turn, data.sites || []);
+    } else if (ev === "sources") {
+      /* 引用卡片先于正文渲染 */
+      turn.sources = data.sources || [];
+      showCitations(turn);
+    } else if (ev === "delta") {
+      markTtft(turn);
+      if (state.answerFormat === "structured") {
+        if (!turn.structured) turn.bodyEl.innerHTML = '<span class="muted">正在生成结构化答案…</span>';
+      } else {
+        turn.raw += (data.content || "");
+        renderAnswer(turn);
+      }
+    } else if (ev === "structured") {
+      markTtft(turn);
+      turn.structured = data;
+      turn.bodyEl.innerHTML = "";
+      renderStructuredCard(turn, data);
+      scrollMessages();
+    } else if (ev === "done") {
+      turn.done = data;
+      if (turn.structured) {
+        turn.bodyEl.innerHTML = "";
+      } else if (data.answer) {
+        turn.raw = data.answer;
+        renderAnswer(turn);
+      }
+      updateTurnMeta(turn, false);
+    } else if (ev === "error") {
+      var msg = (data.message || "生成出错") + (data.code ? "（code " + data.code + "）" : "");
+      turn.errEl.textContent = msg;
+      turn.errEl.hidden = false;
+      showChatError(msg);
+    }
+  }
+
+  function updateTurnMeta(turn, aborted) {
+    var parts = [];
+    if (turn.done) {
+      if (turn.done.ttft_ms != null) parts.push("服务端 ttft " + turn.done.ttft_ms + " ms");
+      if (turn.done.elapsed_ms != null) parts.push("耗时 " + turn.done.elapsed_ms + " ms");
+      var u = turn.done.usage || {};
+      if (u.total_tokens != null) {
+        parts.push("tokens " + u.total_tokens + "（prompt " + (u.prompt_tokens || 0) + " / completion " + (u.completion_tokens || 0) + "）");
+      }
+      if (turn.done.model) parts.push(turn.done.model);
+    }
+    if (turn.requestId) parts.push("req " + turn.requestId);
+    if (aborted) parts.push("已停止");
+    if (!parts.length) parts.push(aborted ? "已停止" : "已完成");
+    turn.metaTextEl.textContent = parts.join(" · ");
+  }
+
+  function setStreamingUI(on) {
+    $("btn-send").disabled = on;
+    $("btn-stop").hidden = !on;
+  }
+
+  function finalizeTurn(turn, aborted, controller) {
+    if (controller && state.controller !== controller) return;
+    state.streaming = false;
+    state.controller = null;
+    setStreamingUI(false);
+    if (aborted && !turn.raw && !turn.structured) {
+      turn.bodyEl.innerHTML = '<span class="muted">（已停止生成）</span>';
+    }
+    updateTurnMeta(turn, aborted);
+    var answer = turn.raw || (turn.structured ? structuredToText(turn.structured) : "");
+    if (turn.question) {
+      state.history.push({ role: "user", content: turn.question, images: turn.images || [] });
+      if (answer) state.history.push({ role: "assistant", content: answer });
+      state.history = state.history.slice(-20);
+    }
+    var foot = [];
+    if (turn.clientTtft != null) foot.push("首字 " + turn.clientTtft + " ms");
+    if (turn.done && turn.done.ttft_ms != null) foot.push("服务端 ttft " + turn.done.ttft_ms + " ms");
+    if (turn.done && turn.done.elapsed_ms != null) foot.push("耗时 " + turn.done.elapsed_ms + " ms");
+    if (turn.done && turn.done.usage && turn.done.usage.total_tokens != null) foot.push("tokens " + turn.done.usage.total_tokens);
+    if (turn.done && turn.done.model) foot.push(turn.done.model);
+    if (turn.requestId) foot.push("req " + turn.requestId);
+    foot.push("history " + Math.floor(state.history.length / 2) + " 轮");
+    $("chat-meta").textContent = "上一轮：" + foot.join(" · ");
+    scrollMessages();
+    refreshTraces();
+  }
+
+  function applyNonStream(turn, data) {
+    if (!data) return;
+    turn.requestId = data.request_id || "";
+    turn.model = data.model || "";
+    if (data.rewritten_question && data.rewritten_question !== turn.question) setRewrite(turn, data.rewritten_question);
+    if (data.sites && data.sites.length) renderTurnSites(turn, data.sites);
+    turn.sources = data.sources || [];
+    showCitations(turn);
+    turn.done = {
+      answer: data.answer, usage: data.usage, elapsed_ms: data.elapsed_ms,
+      ttft_ms: data.ttft_ms, model: data.model
+    };
+    if (data.structured) {
+      turn.structured = data.structured;
+      renderStructuredCard(turn, data.structured);
+    } else {
+      turn.raw = data.answer || "";
+      renderAnswer(turn);
+    }
+    updateTurnMeta(turn, false);
+  }
+
+  function sendQuestion() {
+    var input = $("question");
+    var question = input.value.trim();
+    if (!question) {
+      showChatError("问题不能为空（question 必填，1~2000 字）。");
+      return;
+    }
+    if (question.length > 2000) {
+      showChatError("问题长度 " + question.length + " 字，超过 2000 字上限。");
+      return;
+    }
+    if (state.streaming && state.controller) state.controller.abort();
+    clearChatError();
+    input.value = "";
+    var turn = createTurn(question);
+    state.streaming = true;
+    setStreamingUI(true);
+    var controller = new AbortController();
+    state.controller = controller;
+
+    // 与同源的《蜀迹》剧情共用存档。只把已完成地点映射成解锁能力，
+    // 后端仍会再次按地点能力拦截，前端状态只用于传递进度。
+    var unlockedMemories = [];
+    try {
+      var story = JSON.parse(localStorage.getItem("shuji-story-v3") || "{}");
+      var done = Array.isArray(story.done) ? story.done : [];
+      var memoryBySite = {wuhou:"sanguo", dufu:"shici", dujiangyan:"shuili", sanxingdui:"wenwu", jinsha:"jinqi"};
+      unlockedMemories = done.map(function(id) { return memoryBySite[id]; }).filter(Boolean);
+    } catch (_) { /* 无存档时按未解锁处理 */ }
+    var payload = {
+      question: question,
+      unlocked_memories: unlockedMemories,
+      images: state.imagesForChat || [],
+      stream: state.streamEnabled,
+      answer_format: state.answerFormat,
+      top_k: state.topK,
+      session_id: state.sessionId,
+      history: state.history.slice(-20),
+      filters: {},
+      use_tools: true,
+      rewrite: !(state.imagesForChat && state.imagesForChat.length)
+    };
+    if (state.imagesForChat && state.imagesForChat.length) { turn.images = state.imagesForChat.slice(); turn.images.forEach(function(image) { var thumbnail = document.createElement("img"); thumbnail.src = image; thumbnail.alt = "本轮提问图片"; thumbnail.style.cssText = "max-width:180px;max-height:150px"; turn.userEl.appendChild(thumbnail); }); state.imagesForChat = null; }
+    turn.t0 = performance.now();
+
+    var work;
+    if (state.streamEnabled) {
+      work = sse(payload, function (ev, data) { handleEvent(turn, ev, data); }, controller.signal);
+    } else {
+      work = api("/chat", {
+        method: "POST",
+        body: Object.assign({}, payload, { stream: false }),
+        signal: controller.signal
+      }).then(function (data) { applyNonStream(turn, data); });
+    }
+
+    work.then(function () {
+      finalizeTurn(turn, controller.signal.aborted, controller);
+    }).catch(function (e) {
+      if (e && e.name === "AbortError") {
+        finalizeTurn(turn, true, controller);
+        return;
+      }
+      var msg = describeError(e);
+      showChatError(msg);
+      turn.errEl.textContent = msg;
+      turn.errEl.hidden = false;
+      finalizeTurn(turn, false, controller);
+    });
+  }
+
+  function newSession() {
+    if (state.streaming && state.controller) state.controller.abort();
+    state.controller = null; state.streaming = false; setStreamingUI(false);
+    state.history = [];
+    state.sessionId = "s_" + randHex(8);
+    state.activeTurnId = "";
+    turns = {};
+    $("messages").innerHTML = "";
+    $("citations").innerHTML = "";
+    $("cites-count").textContent = "0";
+    $("chat-meta").textContent = "—";
+    clearChatError();
+    $("messages").appendChild(el("div", "muted", "新会话已开始。" + state.sessionId));
+  }
+
+  /* ---------------- 事件绑定 ---------------- */
+  function bindEvents() {
+    $("alert-close").innerHTML = ICON.close;
+    $("alert-close").addEventListener("click", clearAlert);
+
+    $("btn-refresh").innerHTML = ICON.refresh;
+    $("btn-refresh").addEventListener("click", function () {
+      clearAlert();
+      refreshHealth();
+      refreshConfig();
+      refreshStats();
+      refreshDocuments();
+      loadSites();
+      loadModelSettings();
+    });
+
+    $("btn-new").innerHTML = ICON.plus;
+    $("btn-new").addEventListener("click", newSession);
+
+    $("token-input").addEventListener("change", function () {
+      setToken(this.value.trim());
+      showAlert(this.value.trim() ? "已把 token 存到浏览器本地（localStorage），后续请求自动带 Authorization。" : "已清除本地 token。", "ok");
+      refreshHealth(true);
+    });
+
+    $("topk").addEventListener("input", function () {
+      state.topK = clampInt(this.value, 1, 10, 4);
+      $("topk-val").textContent = String(state.topK);
+    });
+    $("fmt").addEventListener("change", function () {
+      state.answerFormat = this.checked ? "structured" : "text";
+    });
+
+    $("btn-send").addEventListener("click", sendQuestion);
+    $("btn-stop").addEventListener("click", function () {
+      if (state.controller) state.controller.abort();
+    });
+    $("question").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+        e.preventDefault();
+        sendQuestion();
+      }
+    });
+
+    $("messages").addEventListener("click", function (e) {
+      var a = e.target && e.target.closest ? e.target.closest(".cite-ref") : null;
+      if (a) jumpToCitation(a.getAttribute("data-turn"), parseInt(a.getAttribute("data-n"), 10));
+    });
+    $("messages").addEventListener("keydown", function (e) {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      var a = e.target && e.target.closest ? e.target.closest(".cite-ref") : null;
+      if (a) {
+        e.preventDefault();
+        jumpToCitation(a.getAttribute("data-turn"), parseInt(a.getAttribute("data-n"), 10));
+      }
+    });
+
+    $("btn-docs-refresh").addEventListener("click", function () {
+      refreshDocuments();
+      refreshHealth(true);
+    });
+    $("btn-ingest-inc").addEventListener("click", function () { startIngest("incremental"); });
+    $("btn-ingest-rebuild").addEventListener("click", function () {
+      if (!window.confirm("清空重建会先清空现有索引再全量入库，确认继续？")) return;
+      startIngest("rebuild");
+    });
+
+    $("drop").addEventListener("click", function (e) {
+      if (e.target && e.target.id === "file-input") return; /* 防止 input.click() 冒泡造成递归 */
+      $("file-input").click();
+    });
+    $("file-input").addEventListener("change", function () {
+      uploadFiles(this.files);
+      this.value = "";
+    });
+    ["dragenter", "dragover"].forEach(function (ev) {
+      $("drop").addEventListener(ev, function (e) {
+        e.preventDefault();
+        $("drop").classList.add("over");
+      });
+    });
+    ["dragleave", "drop"].forEach(function (ev) {
+      $("drop").addEventListener(ev, function (e) {
+        e.preventDefault();
+        $("drop").classList.remove("over");
+      });
+    });
+    $("drop").addEventListener("drop", function (e) {
+      if (e.dataTransfer && e.dataTransfer.files) uploadFiles(e.dataTransfer.files);
+    });
+    /* 防止文件被拖到页面其他位置时浏览器直接打开它 */
+    document.addEventListener("dragover", function (e) { e.preventDefault(); });
+    document.addEventListener("drop", function (e) { e.preventDefault(); });
+
+    $("btn-search").addEventListener("click", runSearch);
+    $("q-search").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        runSearch();
+      }
+    });
+
+    $("lightbox").addEventListener("click", closeLightbox);
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !$("lightbox").hidden) closeLightbox();
+    });
+  }
+
+
+  var selectedPhoto = '';
+  var selectedPhotos = [];
+  var photoBusy = false;
+  function refreshTraces() {
+    api('/traces?limit=12').then(function(data) {
+      var list = data.traces || []; var host = $('trace-list'); host.textContent = '';
+      if (!list.length) { host.textContent = '还没有问答记录。'; return; }
+      list.forEach(function(trace) {
+        var row = el('div', 'mt6'); row.appendChild(el('strong', '', trace.question));
+        row.appendChild(el('div', 'muted', (trace.model || '') + ' · ' + trace.elapsed_ms + ' ms' + (trace.error ? ' · ' + trace.error : ''))); host.appendChild(row);
+      });
+    }).catch(function(error) { $('trace-list').textContent = describeError(error); });
+  }
+  function loadModelSettings() {
+    api('/settings/models').then(function(settings) {
+      var c = settings.chat || {}, e = settings.embedding || {}, v = settings.vision || {};
+      $('set-api-mode').value = settings.api_mode || 'three';
+      $('set-chat-provider').value = c.provider || 'ollama'; $('set-chat-url').value = c.base_url || ''; $('set-chat-model').value = c.model || '';
+      $('set-chat-key').value = ''; $('set-chat-key-state').textContent = c.api_key_configured ? 'API Key 已保存（不会回显）；留空会保留。' : '尚未配置 API Key。';
+      $('set-embedding-provider').value = e.provider || 'ollama'; $('set-embedding-url').value = e.base_url || ''; $('set-embedding-model').value = e.model || ''; $('set-embedding-dim').value = e.dim || 1024;
+      $('set-embedding-key').value = ''; $('set-embedding-key-state').textContent = (e.api_key_configured ? 'API Key 已保存（不会回显）；留空会保留。' : '尚未配置 API Key。') + '更换模型或维度后需清空重建索引。';
+      $('set-vision-enabled').checked = !!v.enabled; $('set-vision-provider').value = v.provider || 'ollama'; $('set-vision-url').value = v.base_url || ''; $('set-vision-model').value = v.model || ''; $('set-recognize-url').value = v.retrieval_url || '';
+      $('set-vision-key').value = ''; $('set-vision-key-state').textContent = v.api_key_configured ? 'API Key 已保存（不会回显）；留空会保留。' : '尚未配置 API Key。';
+      updateApiModeUI();
+      $('model-settings-status').textContent = settings.pending_restart ? '有待重启生效的配置' : '已加载当前配置';
+    }).catch(function(error) { $('model-settings-status').textContent = '读取失败：' + describeError(error); });
+  }
+  function saveModelSettings() {
+    var body = {
+      api_mode:$('set-api-mode').value,
+      chat: {provider:$('set-chat-provider').value,base_url:$('set-chat-url').value.trim(),model:$('set-chat-model').value.trim(),api_key:$('set-chat-key').value,clear_api_key:$('set-chat-clear').checked},
+      embedding: {provider:$('set-embedding-provider').value,base_url:$('set-embedding-url').value.trim(),model:$('set-embedding-model').value.trim(),dim:Number($('set-embedding-dim').value),api_key:$('set-embedding-key').value,clear_api_key:$('set-embedding-clear').checked},
+      vision: {enabled:$('set-vision-enabled').checked,provider:$('set-vision-provider').value,base_url:$('set-vision-url').value.trim(),model:$('set-vision-model').value.trim(),api_key:$('set-vision-key').value,clear_api_key:$('set-vision-clear').checked,retrieval_url:$('set-recognize-url').value.trim()}
+    };
+    var button = $('btn-model-settings-save'); button.disabled = true; $('model-settings-status').textContent = '正在安全保存…';
+    api('/settings/models',{method:'PUT',body:body}).then(function() {
+      $('set-chat-key').value = ''; $('set-embedding-key').value = ''; $('set-vision-key').value = '';
+      $('set-chat-clear').checked = false; $('set-embedding-clear').checked = false; $('set-vision-clear').checked = false;
+      $('model-settings-status').textContent = '已保存；重启后生效';
+      showAlert(($('set-api-mode').value === 'two' ? 'Chat 与 Vision 共用 API，' : '三组 API 配置，') + '已分别保存到本机文件。点击顶部“重启服务”使配置生效；更换 Embedding 模型或维度后还需清空重建索引。','ok');
+    }).catch(function(error) { $('model-settings-status').textContent = '保存失败'; showAlert('配置未保存：' + describeError(error),'err'); })
+      .finally(function(){ button.disabled = false; });
+  }
+  function bindConnectedFeatures() {
+    $('btn-model-settings-save').addEventListener('click', saveModelSettings);
+    $('btn-service-restart').addEventListener('click', async function() {
+      var button = this;
+      if (!window.confirm('重启会让控制台和地图短暂断开，服务恢复后页面会自动重连。现在重启吗？')) return;
+      button.disabled = true;
+      try {
+        await api('/system/restart', {method:'POST', body:{}});
+        showAlert('正在重启服务，请稍候…', 'warn');
+        await new Promise(function(resolve) { setTimeout(resolve, 1200); });
+        var wentOffline = false;
+        for (var attempt = 0; attempt < 90; attempt++) {
+          try {
+            await api('/health');
+            if (wentOffline) {
+              button.disabled = false;
+              showAlert('服务已重启并恢复连接。', 'ok');
+              refreshHealth(); refreshConfig(); refreshStats(); refreshDocuments(); loadSites(); loadModelSettings();
+              return;
+            }
+          } catch (_) { wentOffline = true; }
+          await new Promise(function(resolve) { setTimeout(resolve, 800); });
+        }
+        throw new Error('等待服务恢复超时，请检查启动窗口。');
+      } catch (error) {
+        button.disabled = false;
+        showAlert('服务重启失败：' + describeError(error), 'err');
+      }
+    });
+    $('btn-service-stop').addEventListener('click', async function() {
+      var button = this;
+      if (!window.confirm('停止后控制台和地图将暂时无法使用。之后可通过“启动项目.cmd”重新启动。确定停止服务吗？')) return;
+      button.disabled = true;
+      try {
+        await api('/system/stop', {method:'POST', body:{}});
+        showAlert('服务正在停止。之后双击“启动项目.cmd”即可重新启动。', 'warn');
+      } catch (error) {
+        button.disabled = false;
+        showAlert('停止服务失败：' + describeError(error), 'err');
+      }
+    });
+    $('set-api-mode').addEventListener('change', updateApiModeUI);
+    loadModelSettings();
+    $('btn-photo-sample').onclick = async function() {
+      this.disabled = true;
+      try {
+        selectedPhoto = await window.ShujiAPI.sampleImage();
+        selectedPhotos = [selectedPhoto]; $('photo-more').textContent = '';
+        $('photo-preview').src = selectedPhoto; $('photo-preview').hidden = false;
+        $('btn-recognize').disabled = false; $('btn-image-chat').disabled = false;
+        $('photo-result').textContent = '武侯祠示例照片已准备好。';
+      } catch (error) { $('photo-result').textContent = error.message; }
+      finally { this.disabled = false; }
+    };
+    $('photo-input').onchange = async function() {
+      selectedPhoto = ''; selectedPhotos = []; $('photo-more').textContent = ''; $('photo-preview').hidden = true; $('btn-recognize').disabled = true; $('btn-image-chat').disabled = true;
+      try {
+        var files = Array.from(this.files || []); if (files.length < 1 || files.length > 4) throw new Error('每轮请选择 1 至 4 张照片');
+        selectedPhotos = await Promise.all(files.map(window.ShujiAPI.readImage)); selectedPhoto = selectedPhotos[0];
+        $('photo-preview').src = selectedPhoto; $('photo-preview').hidden = false;
+        selectedPhotos.slice(1).forEach(function(image,index) { var thumb = document.createElement('img'); thumb.src = image; thumb.alt = '已选照片 ' + (index+2); thumb.style.cssText = 'width:80px;height:72px;object-fit:cover'; $('photo-more').appendChild(thumb); });
+        $('photo-result').textContent = '已选 ' + selectedPhotos.length + ' 张照片；识景使用第一张，带图问答会发送全部照片。'; $('btn-recognize').disabled = false; $('btn-image-chat').disabled = false;
+      }
+      catch (error) { $('photo-result').textContent = error.message; }
+    };
+    $('btn-photo-clear').onclick = function() { selectedPhoto = ''; selectedPhotos = []; state.imagesForChat = null; $('photo-more').textContent = ''; $('photo-input').value = ''; $('photo-preview').hidden = true; $('photo-preview').removeAttribute('src'); $('btn-recognize').disabled = true; $('btn-image-chat').disabled = true; $('photo-result').textContent = '图片已移除。'; };
+    $('btn-recognize').onclick = async function() {
+      if (!selectedPhoto || photoBusy) return; photoBusy = true; this.disabled = true; $('photo-result').textContent = '正在识别…';
+      try { var result = await api('/recognize', {method:'POST', body:{image:selectedPhoto}}); var host = $('photo-result'); host.textContent = (result.matched ? '识别为：' : '未匹配到已收录景点：') + result.landmark + ' · ' + result.model;
+        if (result.matched && result.site_id) { var link = el('a', '', ' 在地图上查看'); link.href = '/static/shuji/?site=' + encodeURIComponent(result.site_id); link.target = '_blank'; link.rel = 'noopener'; host.appendChild(link); }
+      } catch(error) { $('photo-result').textContent = '识别失败：' + describeError(error); }
+      finally { photoBusy = false; $('btn-recognize').disabled = !selectedPhoto; }
+    };
+    $('btn-image-chat').onclick = function() { if (!selectedPhoto || state.streaming) return; state.imagesForChat = selectedPhotos.slice(); if (!$('question').value.trim()) $('question').value = '这些照片是什么地方？请根据资料介绍。'; sendQuestion(); };
+    $('btn-ingest-cancel').onclick = function() { if (!state.jobId) return; api('/ingest/jobs/' + encodeURIComponent(state.jobId) + '/cancel', {method:'POST'}).then(function() { showAlert('已请求取消，正在等待当前操作结束。', 'warn'); }).catch(function(e) { showAlert(describeError(e),'err'); }); };
+    $('btn-traces').onclick = refreshTraces;
+    refreshTraces();
+    api('/ingest/jobs').then(function(data) { var running = (data.jobs || []).find(function(job) { return job.status === 'running'; }); if (running) startPolling(running.job_id); }).catch(function() {});
+  }
+  function updateApiModeUI() {
+    var shared = $('set-api-mode').value === 'two';
+    $('set-vision-separate-fields').hidden = shared;
+    $('set-vision-shared-hint').hidden = !shared;
+    if (shared) $('set-vision-key-state').textContent = '共用 Chat API Key；图片识别和图片说明均使用 Chat 模型。';
+    else $('set-vision-key-state').textContent = '视觉模型独立配置；识别检索服务为空时由视觉模型识别。';
+    $('set-api-mode-hint').textContent = shared ? 'Chat 与 Vision 共用一套 API；请在 Chat 卡选支持图片输入的模型。' : 'Chat、Embedding、Vision 分别使用各自模型和配置。';
+  }
+
+  function init() {
+    bindEvents();
+    bindConnectedFeatures();
+    $("token-input").value = getToken();
+    state.sessionId = "s_" + randHex(8);
+    $("messages").appendChild(el("div", "muted", "问点什么吧。发送时会自动带上最近 10 轮对话作为 history。"));
+    refreshHealth(true);
+    refreshConfig();
+    refreshStats();
+    refreshDocuments();
+    loadSites();
+    window.setInterval(function () { refreshHealth(true); }, 20000);
+  }
+
+  init();
+})();
+
+</script>
+</body>
+</html>
