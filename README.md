@@ -1,6 +1,6 @@
 # 蜀迹 · 蓉宝寻忆记
 
-这是一个源码运行版：Go 后端托管本地控制台、知识库 API 和地图游戏前端。无需打包 EXE。
+项目由 Go 后端、静态前端和本机知识库组成。除浏览器访问的源码运行方式外，`desktop/` 还提供 Electron 桌面窗口外壳；目前可从源码启动，Windows 安装包需单独构建。
 
 ## 启动
 
@@ -19,9 +19,11 @@ cd A:\Map
 
 需要 Go 1.25+ 和 Ollama。启动脚本会启动已安装的 Ollama，不会下载模型。停止服务后改 Go 代码，再重新运行启动脚本；改前端后浏览器按 `Ctrl+F5`。
 
+桌面版开发与安装包构建说明见 [`desktop/README.md`](desktop/README.md)。桌面外壳在独立窗口运行同一套 Go 服务和前端；Ollama 与模型仍需单独安装。
+
 ## 当前本机模型
 
-配置文件是 `config/dev.yaml`：
+运行配置位于 `backend/configs/config.dev.yaml`；根目录 `config/` 保存环境变量示例和本机模型密钥文件：
 
 | 用途 | 模型 |
 | --- | --- |
@@ -45,14 +47,22 @@ cd A:\Map
 ```text
 A:\Map\
 ├── backend/                 Go API、服务与检索实现（独立 Go module）
+│   ├── cmd/                 服务端和命令行程序入口
+│   ├── internal/            后端内部模块
+│   ├── configs/             配置模板与景点数据
+│   ├── deploy/              数据库部署文件
+│   └── docs/、eval/、scripts/
 ├── frontend/                控制台、地图游戏和静态资源
+├── desktop/                 Electron 桌面外壳与 Windows 打包配置
 ├── data/
 │   ├── corpus/              当前知识库语料（含分类景点图片）
 │   └── runtime/             索引快照、日志、临时文件和缓存
-├── config/                  开发配置、环境变量示例和本机密钥文件
+├── config/                  环境变量示例和本机密钥文件
 ├── scripts/                 前端检查与 HTTP 联调脚本
 ├── docs/                    联调记录和截图
-├── archive/                 原始交付目录与原始前端解包
+├── archive/                 仅供追溯的原始交付与资源备份（不参与运行）
+├── Dockerfile               Docker 镜像构建
+├── .dockerignore            Docker 构建上下文排除项
 ├── check.ps1                后端与前端检查入口
 ├── start.ps1                本地启动入口
 └── 启动项目.cmd             Windows 双击启动入口
@@ -61,6 +71,8 @@ A:\Map\
 运行中生成的索引、日志与缓存统一写入 `data/runtime/`；前端检查脚本也将临时文件写在该目录。
 
 `archive/` 下的内容是原始交付/提取备份，不参与当前启动。新增的景点 Markdown 来源于原项目 `sites.json`，保留原出处说明，没有额外联网核验。
+
+运行配置、模板和景点数据统一放在 `backend/configs/`；活动配置使用其中的 `sites.json`，不依赖被 Git 忽略的归档目录。根目录 `config/` 只存环境变量示例和本机密钥。Electron、Node 依赖和打包结果分别位于 `desktop/`、`desktop/node_modules/` 和 `desktop/dist/`；依赖和构建产物不会提交到仓库。
 
 ## 检查与排障
 

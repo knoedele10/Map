@@ -31,7 +31,7 @@ storage:
   docs_dir: "../data/corpus"     # 资料目录（仓库根目录的 data/corpus/）
   assets_dir: "../data/runtime/data/assets" # 从文档里抽出的图片
   web_dir: "../frontend"         # 前端页面目录（仓库根目录的 frontend/）
-  sites_file: "../archive/houduan-delivery/sites.json" # 原始交付中的结构化景点数据
+  sites_file: "configs/sites.json" # 结构化景点数据（相对于 backend/ 工作目录）
   pgvector:                     # 仅 backend=pgvector 时生效
     dsn: "${RAG_PG_DSN:-}"     # 例：postgres://rag:rag@127.0.0.1:5432/ragkb
     max_conns: 8                # 连接池上限（表名固定为 rag_chunks，见 deploy/schema.sql）

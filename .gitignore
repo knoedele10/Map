@@ -12,3 +12,7 @@ data/runtime/**
 
 # Archived source snapshots and bundled build outputs
 archive/
+
+# Generated binaries and packaging artifacts
+backend/server.exe
+release-output/

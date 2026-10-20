@@ -69,7 +69,7 @@ if (-not $NoBrowser) {
     }
   }
 }
-$serverArgs = @('run','./cmd/server','-config',(Join-Path $projectRoot 'config/dev.yaml'))
+$serverArgs = @('run','./cmd/server','-config',(Join-Path $projectRoot 'backend/configs/config.dev.yaml'))
 if ($Ingest) { $serverArgs += '-ingest' }
 $controlMarker = Join-Path $runtimeDir 'service-control.request'
 $env:RAG_CONTROL_MARKER = $controlMarker

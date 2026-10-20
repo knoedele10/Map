@@ -7,10 +7,15 @@
 <link rel="stylesheet" href="maplibre-gl.css">
 <link rel="stylesheet" href="longbao-games.css?v=20261016-chapter-media2">
 <script src="longbao-games.js?v=20261016-chapter-media2"></script>
+<link rel="stylesheet" href="food-game.css?v=20261018-food1">
+<script src="food-game.js?v=20261018-food1"></script>
+<link rel="stylesheet" href="bgm.css?v=20261018-bgm1">
+<script src="bgm.js?v=20261018-bgm1"></script>
 <script type="importmap">
 {"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/jsm/"}}
 </script>
 <script type="module" src="relic-viewer-3d.js?v=20261015-3d1"></script>
+<script src="/static/integration.js?v=20261018-map-import1"></script>
 <style>
 :root{
   --ink-900:#1C1A17; --ink-700:#3A362F; --ink-500:#6B6357; --ink-300:#A79C88;
@@ -310,8 +315,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 #rrSend{padding:0 15px;background:var(--jade);color:var(--paper-100);border-radius:5px;font-size:13px}
 #rrSend:disabled{background:var(--ink-300);cursor:not-allowed}
 #rrQuick{display:flex;flex-wrap:wrap;gap:5px;padding:0 14px 11px}
-.rr-image-hint{padding:0 14px 9px;color:var(--ink-500);font-size:11px}
-#rrPanel.rr-drop-active{outline:3px dashed var(--jade);outline-offset:3px}
 .qk{font-size:11.5px;padding:3px 9px;border:1px solid var(--paper-400);border-radius:11px;
   color:var(--ink-500);background:var(--paper-100)}
 .qk:hover{border-color:var(--jade);color:var(--jade)}
@@ -800,8 +803,84 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 @media(prefers-reduced-motion:reduce){
   .intro-far,.intro-mid,.intro-near,.intro-mist i,#introHero,#introHero img,.hero-halo,.hero-shine,#introInner h1,#introStart{animation:none!important}
 }
+/* 2026-10-18：闯关图卷轴化与第五个游戏入口。 */
+.world-scroll-shadow{fill:#17392f;opacity:.2;filter:blur(12px)}
+.world-scroll-paper{fill:url(#worldPaper);stroke:#906b35;stroke-width:7}
+.world-scroll-edge{fill:none;stroke:#d9b969;stroke-width:3;opacity:.9}
+.world-scroll-rod{fill:url(#worldWood);stroke:#59361f;stroke-width:3}
+.world-scroll-cap{fill:#c99d4a;stroke:#684321;stroke-width:3}
+.world-scroll-corner{fill:none;stroke:#6e967e;stroke-width:7;stroke-linecap:round;opacity:.85}
+.world-map-title{font:700 26px var(--serif);fill:#5f3d22;letter-spacing:7px}
+.world-map-subtitle{font:600 13px var(--serif);fill:#8a6b45;letter-spacing:3px}
+.world-map-seal{fill:#a54831;stroke:#6f2c20;stroke-width:1.5;opacity:.92}
+.world-map-seal-text{font:700 10px var(--serif);fill:#f8e7bd;text-anchor:middle;writing-mode:vertical-rl;letter-spacing:2px}
+.world-map-ready #mapSvg{filter:drop-shadow(0 16px 26px rgba(36,49,37,.22))}
+.world-map-ready #realMap{background:linear-gradient(135deg,#cfdfd0,#f0e9bd 55%,#b4c9ad)}
+.world-map-ready #mapScope,.world-map-ready #farSites{border-radius:8px;border-width:7px;border-style:solid;border-color:#9b7441;background:linear-gradient(90deg,#9b7441 0 5px,#f5ebca 5px calc(100% - 5px),#9b7441 calc(100% - 5px));box-shadow:inset 0 0 24px rgba(132,95,47,.18),0 12px 22px rgba(48,65,50,.22)}
+.world-map-ready #mapScope::before,.world-map-ready #farSites::before{content:"";position:absolute;left:-12px;right:-12px;top:-9px;height:8px;border-radius:8px;background:linear-gradient(#cda964,#79512d);box-shadow:0 calc(100% + 178px) 0 #8e6034}
+.world-map-ready #questTracker{border-radius:8px;border-width:7px;border-style:solid;border-color:#9b7441;background:linear-gradient(90deg,#9b7441 0 5px,#f5ebca 5px calc(100% - 5px),#9b7441 calc(100% - 5px));box-shadow:inset 0 0 24px rgba(132,95,47,.18),0 12px 22px rgba(48,65,50,.22)}
+.world-map-ready #questTracker::before{display:none}
+.world-map-ready #questTracker::after{right:17px;top:15px}
+.world-map-ready .world-land{fill:url(#worldTerrain);stroke:#9f7947;stroke-width:2}
+.world-map-ready .world-mountain{fill:#758b64;opacity:.52;stroke:#4d664e;stroke-width:1.25}
+.world-map-ready .world-plain{fill:#d8cc91;opacity:.32}
+.world-map-ready .world-city text:not(.world-level-number){font-size:17px;paint-order:stroke;stroke:#f8efcf;stroke-width:4px;stroke-linejoin:round}
+.world-map-ready .world-route-under{fill:none;stroke:#6d472a;stroke-width:11;stroke-linecap:round;stroke-linejoin:round;opacity:.28}
+.world-map-ready .world-route{stroke:#e0ad38;stroke-width:5;stroke-dasharray:9 7;stroke-linecap:round;filter:drop-shadow(0 0 4px rgba(255,218,92,.95));animation:world-route-march 9s linear infinite}
+.world-map-ready .world-river{stroke:#4e9a9a;stroke-width:3.5;opacity:.55}
+.world-road-major{fill:none;stroke:#b68253;stroke-width:4;stroke-linecap:round;opacity:.58}
+.world-road{fill:none;stroke:#9f8464;stroke-width:1.5;stroke-linecap:round;opacity:.42}
+.world-road-minor{fill:none;stroke:#b7a07d;stroke-width:.9;opacity:.42}
+.world-district{fill:none;stroke:#8f7858;stroke-width:1.1;stroke-dasharray:5 4;opacity:.38}
+.world-contour{fill:none;stroke:#8b795d;stroke-width:1;opacity:.2}
+.world-forest{fill:#607b5d;opacity:.58;stroke:#425c46;stroke-width:.7}
+.world-field{fill:#bea86e;opacity:.18;stroke:#92754d;stroke-width:.7}
+.world-building{fill:#d7c28f;stroke:#9a7a4d;stroke-width:.7;opacity:.72}
+.world-place{font:600 11px var(--serif);fill:#7d6549;paint-order:stroke;stroke:#f3e7c6;stroke-width:3px;letter-spacing:.12em}
+.world-era{font:700 9px var(--sans);fill:#fff4cf;letter-spacing:.08em;text-anchor:middle}
+.world-era-pill{fill:#73513a;stroke:#e0b957;stroke-width:1.2;opacity:.92}
+.world-route-dot{fill:#fff1a7;stroke:#966523;stroke-width:1.3;filter:drop-shadow(0 0 4px #ffe187)}
+@keyframes world-route-march{to{stroke-dashoffset:-160}}
+@media(prefers-reduced-motion:reduce){.world-map-ready .world-route{animation:none}}
+.game-rail button:nth-child(5) .rail-glyph{background:radial-gradient(circle at 35% 28%,#dfb65d,#a45b28 55%,#67331d)}
+.game-rail button{position:relative}
+.rail-count{position:absolute;right:4px;top:3px;min-width:25px;padding:1px 4px;border-radius:10px;background:#173f35;color:#ffe5a2;font:700 8px/1.25 system-ui;box-shadow:0 1px 4px #0004}
+#storyScreen.photo-scene #storyBg{filter:saturate(.88) contrast(1.05) brightness(.78)}
+#storyScreen.photo-scene #storyScene{display:none}
+#storyScreen.photo-scene #storyInk{background:linear-gradient(90deg,rgba(7,18,14,.26),rgba(10,13,11,.06) 46%,rgba(8,12,10,.2))}
+
+/* 横幅闯关地图：中央卷轴 + 左侧冒险指南 + 右侧多任务竹简。 */
+.quest-chapter-list{display:none}
+.world-map-ready #mapScope{left:18px;top:94px;width:205px;padding:18px 15px 15px;border-radius:5px;box-shadow:inset 8px 0 rgba(104,72,34,.11),inset -8px 0 rgba(104,72,34,.11),0 12px 22px rgba(36,56,42,.22)}
+.world-map-ready #mapScope::before{display:block;left:-15px;right:-15px;top:-12px;height:13px;border:2px solid #694421;border-radius:8px;background:linear-gradient(#d7b56d,#80512a 48%,#ad743b);box-shadow:0 5px 8px rgba(55,34,19,.28)}
+.world-map-ready #mapScope::after{inset:8px;border:1px solid rgba(133,87,38,.2);border-radius:2px}
+.world-map-ready #mapScopeTitle{display:block;padding-bottom:8px;text-align:center;letter-spacing:.17em}
+.world-map-ready #mapScopeDesc{display:block!important;padding:7px 5px;border-top:1px solid rgba(125,83,39,.22);border-bottom:1px solid rgba(125,83,39,.22);text-align:center}
+.world-map-ready #mapMode{gap:7px}.world-map-ready .mode-btn{min-height:34px;border-radius:7px}
+.world-map-ready #farSites{left:18px;top:332px;width:205px;padding:18px 15px 14px;border-radius:5px;box-shadow:inset 8px 0 rgba(104,72,34,.1),inset -8px 0 rgba(104,72,34,.1),0 12px 22px rgba(36,56,42,.19)}
+.world-map-ready #farSites::before{display:block;left:-15px;right:-15px;top:-11px;height:12px;border:2px solid #694421;border-radius:8px;background:linear-gradient(#d7b56d,#80512a 48%,#ad743b);box-shadow:0 5px 8px rgba(55,34,19,.25)}
+.world-map-ready #farSites h3{text-align:center;font-size:13px;letter-spacing:.1em;margin-bottom:7px}.world-map-ready .far-btn{border-bottom:1px solid rgba(112,76,38,.18);border-radius:0}
+.world-map-ready #questTracker{right:18px;top:94px;width:218px;max-height:calc(100vh - 188px);overflow-x:hidden;overflow-y:auto;padding:20px 14px 16px;border-radius:5px;scrollbar-width:thin;box-shadow:inset 8px 0 rgba(104,72,34,.1),inset -8px 0 rgba(104,72,34,.1),0 12px 24px rgba(36,56,42,.23)}
+.world-map-ready #questTracker::before{display:block;content:"";position:absolute;left:-15px;right:-15px;top:-12px;width:auto;height:13px;border:2px solid #694421;border-radius:8px;background:linear-gradient(#d7b56d,#80512a 48%,#ad743b);transform:none;box-shadow:0 5px 8px rgba(55,34,19,.28)}
+.world-map-ready #questTracker::after{right:17px;top:18px;width:28px;height:28px}
+.world-map-ready .quest-kicker{padding-right:38px;font-size:13px;color:#713922}.world-map-ready #questTitle{font-size:15px}.world-map-ready #questDesc{margin-top:5px;line-height:1.48}
+.world-map-ready #questAction{margin-top:8px;padding:7px 9px}
+.world-map-ready .quest-chapter-list{display:grid;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(117,76,35,.28)}
+.quest-mini{position:relative;width:100%;min-height:62px;padding:9px 10px 17px 43px;border:1px solid rgba(128,88,45,.34);border-radius:10px;background:rgba(255,249,225,.66);color:#5a412d;text-align:left;font-family:var(--serif);cursor:pointer}
+.quest-mini:hover:not(:disabled),.quest-mini:focus-visible:not(:disabled){background:#fff3c7;transform:translateX(-2px);outline:2px solid #346858;outline-offset:1px}
+.quest-mini:disabled{cursor:not-allowed;opacity:.58}.quest-mini.current{border-color:#b45c31;background:linear-gradient(105deg,#fff0bf,#ecd09a)}.quest-mini.done{border-color:#6f957e;background:rgba(220,235,211,.76)}
+.quest-mini-icon{position:absolute;left:9px;top:10px;width:26px;height:26px;display:grid;place-items:center;border-radius:50%;background:#b56830;border:2px solid #eccd7b;color:#fff6d4;font-size:12px}.quest-mini.done .quest-mini-icon{background:#47725f}.quest-mini.locked .quest-mini-icon{background:#897b65}
+.quest-mini strong{display:block;font-size:12px;line-height:1.3}.quest-mini small{display:block;margin-top:3px;color:#897056;font:10px/1.3 system-ui}
+.quest-mini-bar{position:absolute;left:43px;right:10px;bottom:8px;height:4px;border-radius:5px;background:#b5a98d;overflow:hidden}.quest-mini-bar i{display:block;height:100%;background:linear-gradient(90deg,#519379,#d0a33f)}
+.world-map-ready #rrWrap{left:54px;bottom:86px}.world-map-ready #rrAvatar{width:108px;height:138px}.world-map-ready #rrName{font-size:12px}
+.world-map-ready #tip{bottom:84px}
+@media(max-width:1080px){.world-map-ready .quest-chapter-list{display:none}.world-map-ready #questTracker{width:190px}.world-map-ready #mapScope,.world-map-ready #farSites{width:184px}.world-map-ready #rrWrap{left:205px}}
+@media(max-width:700px){
+  .game-rail button{width:19%}.rail-count{right:1px;top:1px}
+  .world-map-ready #mapScope::before,.world-map-ready #farSites::before{display:none}
+  .world-map-ready #mapScope{left:8px;top:70px;width:138px;padding:10px}.world-map-ready #farSites{display:none}.world-map-ready #questTracker{right:8px;top:126px;width:164px;padding:11px}.world-map-ready #rrWrap{left:170px;bottom:60px}.world-map-ready #rrAvatar{width:82px;height:104px}
+}
 </style>
-<script src="/static/integration.js"></script>
 </head>
 <body>
 
@@ -899,10 +978,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   </div>
 
   <aside id="questTracker" aria-label="当前任务">
-    <div class="quest-kicker">当前任务</div>
+    <div class="quest-kicker">任务日志</div>
     <strong id="questTitle">唤醒蓉宝的记忆</strong>
     <p id="questDesc">完成序章后，第一处历史地标将会点亮。</p>
     <button id="questAction">查看任务</button>
+    <div id="questChapterList" class="quest-chapter-list" aria-label="章节任务进度"></div>
   </aside>
 
   <div id="mapLegend">
@@ -920,6 +1000,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     <button id="railBook" title="查看记忆图鉴"><span class="rail-glyph">忆</span><span class="rail-label">记忆图鉴</span></button>
     <button id="railRongbao" title="和蓉宝对话"><span class="rail-glyph">蓉</span><span class="rail-label">蓉宝问答</span></button>
     <button id="railHub" title="打开知识库后台"><span class="rail-glyph">库</span><span class="rail-label">知识宝库</span></button>
+    <button id="railFood" title="收集蜀味印章"><span class="rail-glyph">味</span><span class="rail-label">蜀味寻宝</span><span id="foodRailCount" class="rail-count">0/8</span></button>
   </nav>
 
   <div id="rongbaoWalker" aria-hidden="true">
@@ -936,7 +1017,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <div id="rrAbilities"></div>
       <div id="rrLog"></div>
       <div id="rrQuick"></div>
-      <div class="rr-image-hint">也可以把景点照片拖进聊天窗口，蓉宝帮你辨认</div>
       <form id="rrForm">
         <input id="rrInput" placeholder="蓉宝还没想起什么…" disabled autocomplete="off">
         <button id="rrSend" type="submit" disabled>发送</button>
@@ -1312,7 +1392,7 @@ function setRealMapMode(mode, animate=true){
     : '<span class="rail-glyph">关</span><span class="rail-label">主线闯关</span>';
   railMap.title = world ? '查看成都离线实景地图' : '返回主线闯关地图';
   railMap.setAttribute('aria-label', railMap.title);
-  document.getElementById('mapScopeTitle').textContent = world ? '蓉宝记忆闯关图' : '成都城脉图';
+  document.getElementById('mapScopeTitle').textContent = world ? '冒险指南' : '成都城脉图';
   document.getElementById('mapScopeDesc').innerHTML = world
     ? '按章节依次解锁 · 点击高亮关卡 · <em id="zoomReadout">主线</em>'
     : '离线真实底图 · 道路建筑与景点细节 · <em id="zoomReadout">主城</em>';
@@ -1993,15 +2073,17 @@ function longbaoSVG(form){
    ================================================================== */
 /* 新剧情结构使用独立存档键，避免旧版已通关进度跳过重写后的第零章。 */
 const KEY = 'shuji-story-v3';
-let state = {done:[], main:0, prologue:false, records:{}, taskPending:false, guardianUnlocked:false};
+let state = {done:[], main:0, prologue:false, records:{}, taskPending:false};
 try{ const raw = localStorage.getItem(KEY); if(raw) state = JSON.parse(raw); }catch(e){}
 if(!Array.isArray(state.done)) state.done = [];
 if(typeof state.main !== 'number') state.main = 0;
 if(typeof state.prologue !== 'boolean') state.prologue = false;
 if(!state.records || typeof state.records !== 'object') state.records = {};
 if(typeof state.taskPending !== 'boolean') state.taskPending = false;
-if(typeof state.guardianUnlocked !== 'boolean') state.guardianUnlocked = false;
 if(!state.rongbaoPos || !Number.isFinite(state.rongbaoPos.x) || !Number.isFinite(state.rongbaoPos.y)) state.rongbaoPos = null;
+if(!Array.isArray(state.foodStamps)) state.foodStamps = [];
+if(!state.foodMini || typeof state.foodMini !== 'object') state.foodMini = {};
+if(typeof state.foodBadge !== 'boolean') state.foodBadge = false;
 /* 旧版本只记录了小游戏完成，却可能在剧情尾声前退出而没有推进章节。
    按已完成且连续的专属小游戏恢复进度，避免“第一关过了仍进不了第二关”。 */
 const chapterGame = ['bronze','water','wuhou','poetry'];
@@ -2039,8 +2121,22 @@ syncMissionCard();
 const questTitleEl = document.getElementById('questTitle');
 const questDescEl = document.getElementById('questDesc');
 const questActionEl = document.getElementById('questAction');
+const questChapterListEl = document.getElementById('questChapterList');
+function syncChapterTaskList(){
+  const icons = ['鼎','水','阵','诗','关'];
+  questChapterListEl.innerHTML = MAINLINE.map((chapter,index)=>{
+    const done = chapter.ch <= state.main;
+    const current = state.prologue && chapter.ch === state.main + 1;
+    const locked = !done && !current;
+    const status = done ? '记忆已归位' : current ? '当前可探索' : (!state.prologue && chapter.ch===1 ? '完成唤醒后开启' : '前序章节未完成');
+    const progress = done ? 100 : current ? 42 : 0;
+    return `<button class="quest-mini${done?' done':''}${current?' current':''}${locked?' locked':''}" data-site="${chapter.id}" ${locked?'disabled':''} aria-label="${chapter.title} · ${status}">
+      <span class="quest-mini-icon">${icons[index]}</span><strong>第 ${chapter.ch} 章 · ${chapter.title}</strong><small>${status}</small><span class="quest-mini-bar"><i style="width:${progress}%"></i></span></button>`;
+  }).join('');
+}
 function syncQuestTracker(){
   document.getElementById('playerLevel').textContent = Math.min(5,state.main);
+  syncChapterTaskList();
   if(!state.prologue){
     questTitleEl.textContent = '第零章 · 唤醒蓉宝';
     questDescEl.textContent = '通过对话辨认正确的古蜀线索；唤醒失败可以立即重试。';
@@ -2067,6 +2163,12 @@ questActionEl.onclick = ()=>{
   else if(action === 'book') document.getElementById('memoryBookBtn')?.click();
   else if(action){ moveRongbaoToSite(action); openPanel(action); }
 };
+questChapterListEl.addEventListener('click',event=>{
+  const button = event.target.closest('.quest-mini:not(:disabled)');
+  if(!button) return;
+  moveRongbaoToSite(button.dataset.site);
+  openPanel(button.dataset.site);
+});
 
 /* ==================================================================
    地图装饰（山峦 / 水系 / 城市）
@@ -2140,30 +2242,66 @@ questActionEl.onclick = ()=>{
     cities.map(([n,lng,lat,sm])=>{const p=at(lng,lat);return `<text class="city${sm?' sm':''}" x="${p.x}" y="${p.y}">${n}</text>`;}).join('') +
     pois.map(([n,lng,lat])=>{const p=at(lng,lat);return `<g class="lod-close"><circle class="poi-dot" cx="${p.x}" cy="${p.y}" r="3.2"/><text class="poi-label" x="${(+p.x+7).toFixed(1)}" y="${(+p.y-5).toFixed(1)}">${n}</text></g>`;}).join('');
 
-  /* “世界地图”使用独立的蜀地简图：只保留地形、主要水系、城市和主线连接。 */
+  /* 主线地图使用独立的卷轴冒险图：保留古道、聚落、山林与关卡路线，
+     不再把成都水系当作构图主体。 */
   const worldCities = [
-    ['第一关 · 三星堆',720,210,'sanxingdui',0],['第二关 · 都江堰',310,315,'dujiangyan',0],
-    ['第三关 · 武侯祠',565,455,'wuhou',1],['第四关 · 杜甫草堂',340,610,'dufu',0],
-    ['第五关 · 剑门关',705,720,'jianmen',0]
+    ['第一关 · 三星堆',220,565,'sanxingdui',0],['第二关 · 都江堰',365,430,'dujiangyan',0],
+    ['第三关 · 武侯祠',555,535,'wuhou',1],['第四关 · 杜甫草堂',680,365,'dufu',0],
+    ['第五关 · 剑门关',790,235,'jianmen',0]
   ];
   const world = document.getElementById('gWorld');
   world.innerHTML = `
-    <path class="world-land" d="M155 110 Q300 50 460 96 Q610 60 810 128 Q900 220 866 350 Q930 480 842 602 Q795 746 638 800 Q490 838 342 778 Q190 742 116 612 Q58 486 112 365 Q72 230 155 110Z"/>
-    <path class="world-mountain" d="M132 143 Q210 80 285 132 Q245 206 300 275 Q245 338 282 426 Q205 492 252 588 Q184 666 139 600 Q88 476 126 358 Q86 238 132 143Z"/>
-    <path class="world-mountain" d="M676 124 Q772 108 850 178 Q821 238 862 308 Q798 335 825 409 Q753 385 724 314 Q754 232 676 124Z"/>
-    <ellipse class="world-plain" cx="510" cy="454" rx="230" ry="205"/>
-    <path class="world-river" d="M240 120 Q278 212 300 284 Q348 358 438 424 Q500 476 520 570 Q545 660 535 790"/>
-    <path class="world-river" d="M616 170 Q642 256 625 330 Q606 405 660 487 Q702 548 724 666"/>
-    <path class="world-river" d="M300 284 Q408 315 520 450 Q600 522 705 565"/>
-    <path class="world-route" d="M720 210 C590 220 430 260 310 315 C365 360 485 410 565 455 C520 515 410 565 340 610 C440 685 575 720 705 720"/>
-    <text class="world-terrain" x="145" y="480" transform="rotate(-76 145 480)">川西高原 · 龙门山</text>
-    <text class="world-terrain" x="402" y="520">成都平原</text>
-    <text class="world-terrain" x="704" y="392" transform="rotate(34 704 392)">四川盆地</text>
-    <text class="world-river-name" x="326" y="338" transform="rotate(43 326 338)">岷江</text>
-    <text class="world-river-name" x="634" y="314" transform="rotate(82 634 314)">沱江</text>
-    <text class="world-river-name" x="565" y="492" transform="rotate(35 565 492)">锦江水系</text>
+    <defs>
+      <linearGradient id="worldPaper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fbf2d4"/><stop offset=".54" stop-color="#e9ddba"/><stop offset="1" stop-color="#d8c79c"/></linearGradient>
+      <linearGradient id="worldWood" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#d6ac62"/><stop offset=".35" stop-color="#8f5c30"/><stop offset=".72" stop-color="#be8548"/><stop offset="1" stop-color="#5b351f"/></linearGradient>
+      <radialGradient id="worldTerrain" cx="52%" cy="48%" r="68%"><stop stop-color="#f5e9c3"/><stop offset=".56" stop-color="#e7d8aa"/><stop offset="1" stop-color="#c7b276"/></radialGradient>
+      <pattern id="worldGrain" width="64" height="64" patternUnits="userSpaceOnUse"><path d="M0 18Q22 7 43 21T70 17M-8 51Q19 39 39 53T72 49" fill="none" stroke="#9b784b" stroke-opacity=".1"/></pattern>
+      <pattern id="worldFineStreets" width="76" height="58" patternUnits="userSpaceOnUse" patternTransform="rotate(-7)">
+        <path d="M0 12H76M0 39H76M18 0V58M52 0V58M0 26L76 8M8 58L76 44" fill="none" stroke="#a58c69" stroke-width=".8" opacity=".3"/>
+      </pattern>
+      <clipPath id="worldClip"><rect x="118" y="190" width="764" height="480" rx="38"/></clipPath>
+      <g id="worldTree"><path class="world-forest" d="M0 11L7 0l7 11h-4l5 8H-1l5-8z"/><path d="M7 18v5" stroke="#59472e" stroke-width="1.5"/></g>
+    </defs>
+    <rect class="world-scroll-shadow" x="64" y="98" width="872" height="642" rx="30"/>
+    <rect class="world-scroll-paper" x="78" y="101" width="844" height="626" rx="20"/>
+    <rect x="94" y="117" width="812" height="594" rx="14" fill="url(#worldGrain)"/>
+    <rect class="world-scroll-edge" x="98" y="121" width="804" height="586" rx="13"/>
+    <rect class="world-scroll-rod" x="47" y="82" width="906" height="28" rx="14"/><circle class="world-scroll-cap" cx="47" cy="96" r="18"/><circle class="world-scroll-cap" cx="953" cy="96" r="18"/>
+    <rect class="world-scroll-rod" x="47" y="719" width="906" height="28" rx="14"/><circle class="world-scroll-cap" cx="47" cy="733" r="18"/><circle class="world-scroll-cap" cx="953" cy="733" r="18"/>
+    <path class="world-scroll-corner" d="M116 160v-22h24M884 160v-22h-24M116 674v22h24M884 674v22h-24"/>
+    <text class="world-map-title" x="500" y="151" text-anchor="middle">蜀地记忆冒险图</text>
+    <text class="world-map-subtitle" x="500" y="176" text-anchor="middle">踏古道 · 过关隘 · 寻记忆</text>
+    <rect class="world-map-seal" x="842" y="132" width="27" height="39" rx="3"/><text class="world-map-seal-text" x="855" y="137">蓉宝寻迹</text>
+    <rect class="world-land" x="118" y="190" width="764" height="480" rx="38"/>
+    <g clip-path="url(#worldClip)">
+      <rect x="118" y="190" width="764" height="480" fill="url(#worldFineStreets)"/>
+      <path class="world-field" d="M132 482l148-70 92 58-36 170-182 18zM385 203l160 8 30 116-174 42-72-88zM610 454l250-50 18 218-208 31z"/>
+      <path class="world-contour" d="M124 235Q214 191 299 226t165 5t176-15t236 30M124 268Q215 224 302 260t168 2t170-13t236 31M126 605q102-45 190-10t178 1t175-16t207 20M134 631q95-33 185-6t178 2t177-13t194 18"/>
+      <path class="world-mountain" d="M118 210Q163 176 209 215q38-31 79 2q-30 48 10 82q-45 35-11 77q-55 33-19 78q-56 40-21 81q-62 39-98 103l-31 18z"/>
+      <path class="world-mountain" d="M735 190q45 22 70 62q42-24 77 14v-76zM781 246q36 32 18 73q51 6 83 47v-112z"/>
+      <path class="world-river" d="M145 308C235 332 270 371 320 419S421 487 506 506s155 6 222 44s105 62 154 58"/>
+      <path class="world-river" d="M614 190c-22 76 7 114-31 164s-63 86-33 151"/>
+      <path class="world-road-major" d="M130 568C246 528 332 493 415 430S579 318 866 247M143 359C260 393 373 395 493 360S709 292 866 319M186 642C326 578 465 599 600 555S739 477 871 445"/>
+      <path class="world-road" d="M153 249C250 277 315 320 368 394S475 520 619 610M285 202c35 86 93 142 176 197s175 86 320 93M463 201c-4 80 30 131 91 174s131 73 266 106M126 465c128-19 236 6 333 62s188 93 404 91M207 192c64 118 61 235 10 353M704 190c-44 125-35 268 34 469"/>
+      <path class="world-road-minor" d="M166 222L323 646M204 208L381 653M258 197L441 664M327 192L509 664M398 191L581 666M474 190L650 661M548 192L722 650M621 190L793 627M690 192L860 594M122 276L878 235M121 325L879 286M120 374L881 340M119 423L882 394M118 473L882 450M118 523L882 506M119 574L881 560M120 624L880 614"/>
+      <path class="world-district" d="M180 247l171 34 37 112-96 91-139-43zM409 244l166-25 95 95-58 119-157-4-70-102zM632 366l180-38 61 102-77 125-173-40zM345 476l168-33 94 96-45 113-172 7-78-89z"/>
+      <g opacity=".9">
+        <use href="#worldTree" x="145" y="230"/><use href="#worldTree" x="173" y="260"/><use href="#worldTree" x="205" y="235"/><use href="#worldTree" x="242" y="285"/><use href="#worldTree" x="151" y="405"/><use href="#worldTree" x="187" y="443"/><use href="#worldTree" x="225" y="392"/>
+        <use href="#worldTree" x="760" y="205"/><use href="#worldTree" x="803" y="270"/><use href="#worldTree" x="835" y="224"/><use href="#worldTree" x="818" y="372"/><use href="#worldTree" x="850" y="409"/>
+      </g>
+      <g class="world-buildings">
+        <rect class="world-building" x="281" y="519" width="22" height="14"/><rect class="world-building" x="309" y="511" width="17" height="22"/><rect class="world-building" x="337" y="529" width="27" height="13"/>
+        <rect class="world-building" x="467" y="393" width="29" height="17"/><rect class="world-building" x="501" y="384" width="18" height="28"/><rect class="world-building" x="527" y="405" width="32" height="14"/>
+        <rect class="world-building" x="618" y="292" width="22" height="16"/><rect class="world-building" x="648" y="285" width="31" height="14"/><rect class="world-building" x="690" y="301" width="18" height="24"/>
+      </g>
+      <text class="world-place" x="156" y="590">古蜀祭台</text><text class="world-place" x="316" y="382">天府驿道</text><text class="world-place" x="486" y="575">锦官城</text><text class="world-place" x="635" y="329">草堂竹径</text><text class="world-place" x="742" y="210">剑门古道</text>
+      <path class="world-route-under" d="M220 565C268 525 330 487 365 430C420 380 505 420 555 535C602 500 637 420 680 365C721 315 753 269 790 235"/>
+      <path class="world-route" d="M220 565C268 525 330 487 365 430C420 380 505 420 555 535C602 500 637 420 680 365C721 315 753 269 790 235"/>
+      <circle class="world-route-dot" cx="292" cy="508" r="4"/><circle class="world-route-dot" cx="452" cy="418" r="4"/><circle class="world-route-dot" cx="616" cy="466" r="4"/><circle class="world-route-dot" cx="738" cy="292" r="4"/>
+    </g>
+    <g><rect class="world-era-pill" x="178" y="606" width="84" height="19" rx="9"/><text class="world-era" x="220" y="619">古蜀祭祀</text><rect class="world-era-pill" x="323" y="389" width="84" height="19" rx="9"/><text class="world-era" x="365" y="402">秦 · 治水</text><rect class="world-era-pill" x="513" y="557" width="84" height="19" rx="9"/><text class="world-era" x="555" y="570">蜀汉 · 北伐</text><rect class="world-era-pill" x="638" y="388" width="84" height="19" rx="9"/><text class="world-era" x="680" y="401">唐 · 诗旅</text><rect class="world-era-pill" x="748" y="257" width="84" height="19" rx="9"/><text class="world-era" x="790" y="270">出川 · 抗战</text></g>
     ${worldCities.map(([name,x,y,id,main],index)=>`<g class="world-city${main?' main':''}" data-site="${id}" data-chapter="${index+1}" tabindex="0" role="button" aria-label="查看${name}"><circle cx="${x}" cy="${y}" r="16"/><circle cx="${x}" cy="${y}" r="5"/><text class="world-level-number" x="${x}" y="${y+4}">${index+1}</text><text x="${x+24}" y="${y+6}">${name}</text></g>`).join('')}
-    <text class="map-note" x="500" y="820" text-anchor="middle">蓉宝记忆闯关地图 · 完成当前章节后自动解锁下一关</text>`;
+    <text class="map-note" x="500" y="692" text-anchor="middle">沿金色古道完成关卡 · 章节通过后自动解锁下一段旅程</text>`;
   world.querySelectorAll('.world-city').forEach(el=>{
     const open = ()=>{ const id=el.dataset.site; moveRongbaoToElement(el,el.getAttribute('aria-label').replace('查看','')); openPanel(id); };
     el.addEventListener('click',open);
@@ -2322,6 +2460,7 @@ function refreshMarkers(){
   document.getElementById('fragRow').innerHTML = MAINLINE.map(c=>
     `<span class="frag-dot${c.ch <= state.main ? ' on' : ''}" title="${c.ch <= state.main ? c.fragment : '第 ' + c.ch + ' 章 · ' + c.title}"></span>`).join('');
   syncQuestTracker();
+  window.ShujiFoodGame?.sync?.();
 }
 
 /* ==================================================================
@@ -2428,12 +2567,25 @@ function sceneMotif(hue, ink){
 async function startStory(site){
   const sc = LONGPU[site.id] || STORIES[site.id]; if(!sc) return;
   currentSite = site; storySite = site; story = sc; nodeIdx = 0; storyAdvancedChapter = 0;
+  if(window.ShujiBGM) window.ShujiBGM.playFor(site.id);
   storyScreen.classList.add('is-active');
   const bookBtn = document.getElementById('memoryBookBtn'); if(bookBtn) bookBtn.style.display='none';
   const hubBtn = document.getElementById('serverHubBtn'); if(hubBtn) hubBtn.style.display='none';
   missionCard.style.display='none';
-  storyBg.style.background = `linear-gradient(165deg, ${sc.hue} 0%, #1A1613 62%, #12100D 100%)`;
-  storyScene.innerHTML = sceneMotif(sc.hue, sc.ink);
+  const storyPhoto = {
+    dufu:'assets/dufu/image1.jpg',
+    jianmen:'assets/jianmen/image1.jpg'
+  }[site.id];
+  storyScreen.classList.toggle('photo-scene', !!storyPhoto);
+  if(storyPhoto){
+    storyBg.style.background = `linear-gradient(90deg,rgba(6,16,12,.34),rgba(17,13,9,.14) 48%,rgba(6,12,9,.26)),url("${storyPhoto}") center / cover no-repeat`;
+    storyBg.style.backgroundPosition = site.id === 'jianmen' ? 'center 42%' : 'center center';
+    storyScene.innerHTML = '';
+  }else{
+    storyBg.style.background = `linear-gradient(165deg, ${sc.hue} 0%, #1A1613 62%, #12100D 100%)`;
+    storyBg.style.backgroundPosition = 'center';
+    storyScene.innerHTML = sceneMotif(sc.hue, sc.ink);
+  }
   storyTag.textContent = sc.title;
   const activeChapter = chapterOf(site.id);
   storyCabinetButton.hidden = !activeChapter;
@@ -2582,6 +2734,7 @@ chapterCabinet.onkeydown=e=>{
 };
 function exitStory(){
   clearInterval(typing); typing = null;
+  if(window.ShujiBGM) window.ShujiBGM.playFor('map');
   if(!chapterCabinet.hidden)closeChapterCabinet();
   factWrap.classList.remove('show');
   storyScreen.classList.remove('relic-viewer-active');
@@ -2733,8 +2886,6 @@ async function finishStory(){
     return;
   }
   if(s && s.id === 'finale'){                          /* 终章 */
-    state.guardianUnlocked = true; save();
-    renderRongRong();
     await toast('✺', '主线完成 · 记忆融合', '古蜀 → 先秦 → 三国 → 唐 → 民国');
     return;
   }
@@ -2958,10 +3109,11 @@ function renderRongRong(){
     return `<span class="ab${on?' on':''}" title="${on?ABILITIES[s.ability].desc:'通关'+s.name+'后解锁'}">${on?'◆':'◇'} ${ABILITIES[s.ability].name}</span>`;
   }).join('');
 
-  rrInput.disabled = false;
-  rrSend.disabled = false;
-  rrInput.placeholder = '和蓉宝聊聊天，或问已解锁的四川记忆…';
-  rrQuick.innerHTML = un.length > 0
+  const canTalk = un.length > 0;
+  rrInput.disabled = !canTalk;
+  rrSend.disabled = !canTalk;
+  rrInput.placeholder = canTalk ? '问蓉宝一个关于四川的问题…' : '蓉宝还没想起什么…';
+  rrQuick.innerHTML = canTalk
     ? un.map(a=>`<button class="qk" data-a="${a}">${ABILITIES[a].name}</button>`).join('')
     : '';
   rrQuick.querySelectorAll('.qk').forEach(b=>{
@@ -2987,32 +3139,8 @@ function pushMsg(cls, text){
    本地 KB 只保留「未解锁门控」与「离线兜底」两个用途。
    ================================================================== */
 const RR_CHAT_API = '/api/v1/chat';
-let rrBusy = false;
-let rrPendingImage = '';
 const rrHistory = [];                    /* 多轮上下文：user/assistant 交替，最多 6 条 */
-
-async function handleDroppedImage(file){
-  if(!file || !file.type.startsWith('image/')) return;
-  if(file.size > 20 * 1024 * 1024){ pushMsg('sys','图片不能超过 20 MB。'); return; }
-  try{
-    rrPendingImage = await ShujiAPI.readImage(file);
-    if(!rrPanel.classList.contains('open')) rrPanel.classList.add('open');
-    await ask('帮我看看这张照片是什么地方，并讲讲相关的记忆。', [rrPendingImage]);
-  }catch(error){ pushMsg('sys','图片读取失败：' + error.message); }
-}
-
-document.addEventListener('dragover', e=>{
-  if(Array.from(e.dataTransfer?.types || []).includes('Files')){ e.preventDefault(); rrPanel.classList.add('rr-drop-active'); }
-});
-document.addEventListener('dragleave', e=>{
-  if(!e.relatedTarget || !document.documentElement.contains(e.relatedTarget)) rrPanel.classList.remove('rr-drop-active');
-});
-document.addEventListener('drop', e=>{
-  if(!Array.from(e.dataTransfer?.types || []).includes('Files')) return;
-  e.preventDefault(); rrPanel.classList.remove('rr-drop-active');
-  const file = Array.from(e.dataTransfer.files || []).find(f=>f.type.startsWith('image/'));
-  if(file) handleDroppedImage(file);
-});
+const RR_NOT_FOUND = /没有找到|未找到|没有相关|查不到/;
 
 function rememberTurn(q, a){
   if(!q || !a) return;
@@ -3069,7 +3197,7 @@ function dispatchSSE(block, onEvent){
 async function streamChat(payload, onEvent){
   const res = await fetch(RR_CHAT_API, {
     method:'POST',
-    headers:ShujiAPI.headers({'Content-Type':'application/json','Accept':'text/event-stream'}),
+    headers:{'Content-Type':'application/json','Accept':'text/event-stream'},
     body: JSON.stringify(payload)
   });
   if(!res.ok){
@@ -3117,13 +3245,13 @@ function findAnswer(q){
 }
 
 /* 一次完整问答：门控 → 流式渲染 → 出处 → 失败降级 → 记入多轮上下文 */
-async function runChat(q, abilities, gate, delayMs, images=[]){
-  if(rrBusy) return;
+async function runChat(q, abilities, gate, delayMs){
   const un = unlocked();
+  if(un.length === 0){ pushMsg('rr','……'); reactRongbao('confused','记忆还没苏醒……',1800); return; }
 
   reactRongbao('thinking','让我想一想……',0);
 
-  if(gate && images.length === 0){
+  if(gate){
     const local = findAnswer(q);                    /* 命中未解锁能力：本地门控，不请求后端 */
     if(local.type === 'locked'){
       pushMsg('me', q);
@@ -3135,8 +3263,7 @@ async function runChat(q, abilities, gate, delayMs, images=[]){
     }
   }
 
-  const userMessage = pushMsg('me', q);
-  images.forEach(src=>{const img=document.createElement('img');img.src=src;img.alt='本轮上传的景点照片';img.style.cssText='display:block;max-width:180px;max-height:130px;border-radius:5px;margin-top:6px';userMessage.appendChild(img);});
+  pushMsg('me', q);
   const bubble = pushMsg('rr', '蓉宝正在回想……');
   rrLog.scrollTop = rrLog.scrollHeight;
 
@@ -3147,7 +3274,6 @@ async function runChat(q, abilities, gate, delayMs, images=[]){
 
   const paint = ()=>{ bubble.textContent = acc; rrLog.scrollTop = rrLog.scrollHeight; };
   const finish = (txt, keepSrc, remember)=>{
-    rrBusy = false; rrSend.disabled = false;
     bubble.textContent = txt;
     if(keepSrc && srcList) showSources(srcList, txt);   /* 答案定稿后按引用编号重新筛一遍 */
     else if(srcEl){ srcEl.remove(); srcEl = null; }
@@ -3185,10 +3311,6 @@ async function runChat(q, abilities, gate, delayMs, images=[]){
 
   const payload = {
     question: q,
-    images,
-    rongbao_persona: true,
-    guardian_unlocked: state.guardianUnlocked === true,
-    unlocked_memories: abilities,
     stream: true,
     top_k: 4,
     abilities: abilities,
@@ -3197,7 +3319,6 @@ async function runChat(q, abilities, gate, delayMs, images=[]){
     rewrite: false
   };
 
-  rrBusy = true; rrSend.disabled = true;
   try{
     if(delayMs) await sleep(delayMs);              /* 保留原来的节奏感 */
     await streamChat(payload, ev=>{
@@ -3215,30 +3336,30 @@ async function runChat(q, abilities, gate, delayMs, images=[]){
     });
   }catch(err){
     if(err && err.httpStatus){                     /* 未配置模型等 HTTP 错误：自动回退内置知识库 */
-      finish('知识库暂时无法回答。' + findAnswer(q).text + '（以上为内置资料）', false, false);
+      finish(findAnswer(q).text, false, true);
     }else if(started && acc){                      /* 流被掐断：保留已收到的文本 */
       finish(acc + '（说到一半忘了）', true, true);
     }else{                                         /* 断网 / 服务没起：回退本地 KB 答案 */
-      finish('知识库暂时无法回答。' + findAnswer(q).text + '（以上为内置资料）', false, false);
+      finish(findAnswer(q).text, false, true);
     }
     return;
   }
 
+  if(acc && RR_NOT_FOUND.test(acc)){ finish(otherText(un), false, true); return; }
   if(midError){
     if(acc) finish(acc + '（说到一半忘了）', true, true);
-    else finish('知识库暂时无法回答。' + findAnswer(q).text + '（以上为内置资料）', false, false);
+    else finish(findAnswer(q).text, false, true);
     return;
   }
-  if(!acc){ finish('知识库暂时无法回答。' + findAnswer(q).text + '（以上为内置资料）', false, false); return; }
+  if(!acc){ finish(findAnswer(q).text, false, true); return; }
   finish(acc, true, true);
 }
 
 async function ask(text){
   const q = (text || '').trim();
-  const image = rrPendingImage;
-  if(!q && !image) return;
-  rrPendingImage = '';
-  await runChat(q || '帮我看看这张照片是什么地方，并讲讲相关的记忆。', unlocked(), true, 0, image ? [image] : []);
+  if(!q) return;
+  if(unlocked().length === 0){ pushMsg('rr','……'); reactRongbao('confused','先陪我找回记忆吧',1800); return; }
+  await runChat(q, unlocked(), true, 0);
 }
 
 async function askByAbility(a){
@@ -3279,10 +3400,17 @@ LongbaoGames.installBook(
   LONGBAO_FORMS,
   MAINLINE
 );
+window.ShujiFoodGame?.install?.({
+  getState:()=>state,
+  saveState:()=>{ save(); refreshMarkers(); },
+  react:(m,t)=>reactRongbao(m,t,2200),
+  toast:(k,t,d)=>toast(k,t,d,2100)
+});
 document.getElementById('railMap').onclick = ()=>setRealMapMode(realMapMode==='atlas' ? 'city' : 'atlas');
 document.getElementById('railBook').onclick = ()=>document.getElementById('memoryBookBtn')?.click();
 document.getElementById('railRongbao').onclick = ()=>document.getElementById('rrAvatar')?.click();
 document.getElementById('railHub').onclick = ()=>window.open('/','_blank','noopener');
+document.getElementById('railFood').onclick = ()=>window.ShujiFoodGame?.open?.();
 
 /* 开场：地图在底层先完成布局与定位，开场页淡出后重新聚焦一次 */
 const introScreen = document.getElementById('introScreen');
@@ -3350,6 +3478,7 @@ installIntroParticles();
 document.getElementById('serverSelect').onclick=()=>toast('蜀','服务器：蜀都一线','离线资源已就绪，无需联网');
 document.getElementById('accountLogin').onclick=()=>toast('客','离线游客模式','无需账号，进度保存在本机');
 document.getElementById('introStart').onclick = ()=>{
+  if(window.ShujiBGM) window.ShujiBGM.playFor('map');
   introScreen.classList.add('hide');
   setTimeout(()=>{introFxRunning=false;cancelAnimationFrame(introFxFrame);},850);
   setRealMapMode('atlas',false);
@@ -3367,6 +3496,6 @@ const keepDesktopAlive = ()=>{ fetch('/__shuji_alive__',{cache:'no-store'}).catc
 keepDesktopAlive();
 setInterval(keepDesktopAlive, 15000);
 </script>
-<script src="connected.js"></script>
+<script src="connected.js?v=20261018-map-import1"></script>
 </body>
 </html>

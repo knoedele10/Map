@@ -14,7 +14,7 @@ storage:
   docs_dir: "../data/corpus"
   assets_dir: "../data/runtime/data/assets"
   web_dir: "../frontend"
-  sites_file: "../archive/houduan-delivery/sites.json"
+  sites_file: "configs/sites.json"
 embedding:
   provider: "ollama"
   base_url: "http://127.0.0.1:11434"

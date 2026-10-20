@@ -66,15 +66,6 @@ label.ctl{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:va
 .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 .grid2 input,.grid2 select{width:100%}
-.model-settings{grid-column:1/-1}
-.model-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.model-card{border:1px solid var(--line);background:#101315;padding:10px;min-width:0}
-.model-card h3{margin:0 0 7px;font-size:13px;font-weight:600}
-.model-card .grid2{grid-template-columns:1fr;gap:7px}
-.model-card small{display:block;color:var(--dim);margin-top:6px}
-.model-actions{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
-.model-settings .panel-body>.row{margin-bottom:8px}
-@media(max-width:900px){.model-grid{grid-template-columns:1fr}}
 .num{width:64px}
 
 /* ---------- 布局 ---------- */
@@ -208,7 +199,6 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
 .lightbox{position:fixed;inset:0;background:rgba(6,8,9,.92);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;cursor:zoom-out}
 .lightbox img{max-width:96vw;max-height:92vh;border:1px solid var(--line2)}
 </style>
-<script src="/static/integration.js"></script>
 </head>
 <body>
 
@@ -232,10 +222,8 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
     </div>
     <div class="lamps" id="lamps"></div>
     <div class="metrics" id="metrics"></div>
-    <div class="grow"></div><a href="/static/shuji/" class="primary">进入蜀迹地图</a>
+    <div class="grow"></div>
     <input class="token-input" id="token-input" type="password" placeholder="Bearer token（可选）" autocomplete="off">
-    <button class="primary" id="btn-service-restart" type="button">重启服务</button>
-    <button class="btn" id="btn-service-stop" type="button">停止服务</button>
     <button class="icon-btn" id="btn-refresh" title="刷新状态"></button>
   </header>
   <div class="subbar">
@@ -247,55 +235,6 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
 
 <main class="layout">
 
-  <section class="panel model-settings">
-    <div class="panel-head"><span>模型与 API 配置</span><span class="mono" id="model-settings-status">读取中…</span></div>
-    <div class="panel-body">
-      <div class="row mb6"><label class="ctl">API 数量模式 <select id="set-api-mode"><option value="two">两个 API：Chat + Vision 共用，Embedding 单独</option><option value="three">三个 API：Chat、Embedding、Vision 分开</option></select></label><span class="muted" id="set-api-mode-hint">两个 API 模式下，Chat 模型必须支持图片输入。</span></div>
-      <div class="model-grid">
-        <div class="model-card">
-          <h3>Chat 对话 API</h3>
-          <div class="grid2">
-            <select id="set-chat-provider"><option value="ollama">本机 Ollama</option><option value="openai">OpenAI 兼容 API</option></select>
-            <input id="set-chat-url" placeholder="Base URL，例如 https://api.deepseek.com/v1">
-            <input id="set-chat-model" placeholder="模型名，例如 deepseek-chat">
-            <input id="set-chat-key" type="password" autocomplete="new-password" placeholder="API Key（留空保留当前密钥）">
-          </div>
-          <label class="ctl mt6"><input id="set-chat-clear" type="checkbox"> 清除已保存密钥</label>
-          <small id="set-chat-key-state">密钥不会回显。</small>
-        </div>
-        <div class="model-card">
-          <h3>Embedding 检索 API</h3>
-          <div class="grid2">
-            <select id="set-embedding-provider"><option value="ollama">本机 Ollama</option><option value="openai">OpenAI 兼容 API</option></select>
-            <input id="set-embedding-url" placeholder="Base URL，例如 http://127.0.0.1:11434">
-            <input id="set-embedding-model" placeholder="模型名，例如 bge-m3:latest">
-            <input id="set-embedding-dim" type="number" min="1" step="1" placeholder="向量维度，例如 1024">
-            <input id="set-embedding-key" type="password" autocomplete="new-password" placeholder="API Key（留空保留当前密钥）">
-          </div>
-          <label class="ctl mt6"><input id="set-embedding-clear" type="checkbox"> 清除已保存密钥</label>
-          <small id="set-embedding-key-state">更换模型或维度后，需清空重建索引。</small>
-        </div>
-        <div class="model-card">
-          <h3>Vision 图片识别 API</h3>
-          <div id="set-vision-separate-fields">
-          <div class="grid2">
-            <label class="ctl"><input id="set-vision-enabled" type="checkbox"> 启用图片识别</label>
-            <select id="set-vision-provider"><option value="ollama">本机 Ollama</option><option value="openai">OpenAI 兼容 API</option></select>
-            <input id="set-vision-url" placeholder="Base URL，例如 http://127.0.0.1:11434">
-            <input id="set-vision-model" placeholder="视觉模型名，例如 qwen2.5vl:latest">
-            <input id="set-vision-key" type="password" autocomplete="new-password" placeholder="API Key（留空保留当前密钥）">
-            <input id="set-recognize-url" placeholder="可选：识别检索服务 URL；留空用视觉模型">
-          </div>
-          <label class="ctl mt6"><input id="set-vision-clear" type="checkbox"> 清除已保存密钥</label>
-          </div>
-          <small id="set-vision-shared-hint" hidden>当前与 Chat 共用服务商、Base URL、模型名和 API Key。请在 Chat 卡配置支持图片输入的模型。</small>
-          <small id="set-vision-key-state">识别检索服务为空时，会由视觉模型识别。</small>
-        </div>
-      </div>
-      <div class="model-actions"><button class="primary" id="btn-model-settings-save">保存 API 配置</button><span class="muted">密钥保存在项目目录的独立本机 .env 文件中。保存后点击顶部“重启服务”使配置生效。</span></div>
-    </div>
-  </section>
-
   <aside class="col col-left">
     <section class="panel">
       <div class="panel-head"><span>资料</span><span class="mono" id="docs-count">0</span></div>
@@ -306,7 +245,7 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
           <button id="btn-ingest-rebuild" class="danger">清空重建</button>
         </div>
         <div class="ingest" id="ingest-box" hidden>
-          <button id="btn-ingest-cancel" class="danger" hidden>取消当前任务</button><div class="ingest-line"><span id="ingest-msg" class="mono">—</span><span id="ingest-pct" class="mono">0%</span></div>
+          <div class="ingest-line"><span id="ingest-msg" class="mono">—</span><span id="ingest-pct" class="mono">0%</span></div>
           <div class="bar"><i id="ingest-bar"></i></div>
           <pre class="logs mono" id="ingest-logs"></pre>
         </div>
@@ -368,18 +307,6 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
   </section>
 
   <aside class="col col-right">
-<section class="panel">
-  <div class="panel-head"><span>拍照识景 / 带图问答</span></div>
-  <div class="panel-body">
-    <input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" multiple aria-label="选择景点照片，最多四张">
-    <img id="photo-preview" alt="已选照片" hidden style="max-width:100%;max-height:220px;margin:12px auto;object-fit:contain">
-    <div id="photo-more" style="display:flex;gap:8px;flex-wrap:wrap"></div>
-    <div class="row mt6"><button id="btn-photo-sample">使用武侯祠示例</button><button id="btn-recognize" disabled>识别景点</button><button id="btn-image-chat" disabled>带图提问</button><button id="btn-photo-clear">移除图片</button></div>
-    <p id="photo-result" role="status" aria-live="polite">支持 JPG / PNG / WebP，原图不超过 20 MB。</p>
-  </div>
-</section>
-<section class="panel"><div class="panel-head"><span>最近问答记录</span><button id="btn-traces">刷新</button></div><div class="panel-body" id="trace-list">暂无记录</div></section>
-
     <section class="panel">
       <div class="panel-head"><span>引用</span><span class="mono" id="cites-count">0</span></div>
       <div class="panel-body"><div class="cites" id="citations"></div></div>
@@ -390,7 +317,7 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
       <div class="panel-body">
         <div class="row">
           <input id="q-search" placeholder="检索 query" style="flex:1">
-          <input class="num" id="q-topk" type="number" min="1" max="50" value="6" title="top_k">
+          <input class="num" id="q-topk" type="number" min="1" max="20" value="6" title="top_k">
           <button class="primary" id="btn-search">检索</button>
         </div>
         <div class="grid2">
@@ -623,29 +550,21 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
       var reader = res.body.getReader();
       var dec = new TextDecoder("utf-8");
       var buf = "";
-      var terminal = false;
-      function emitParsed(parsed) {
-        if (!parsed) return;
-        if (parsed.event === 'done' || parsed.event === 'error') terminal = true;
-        onEvent(parsed.event, parsed.data);
-      }
       function pump() {
         return reader.read().then(function (part) {
           if (part.done) {
-            buf += dec.decode();
             if (buf.trim()) {
               var tail = parseSSEBlock(buf);
-              emitParsed(tail);
+              if (tail) onEvent(tail.event, tail.data);
             }
-            if (!terminal && !(signal && signal.aborted)) throw new Error('服务端未发送完成事件，回答可能不完整');
             return null;
           }
           buf += dec.decode(part.value, { stream: true });
-          var blocks = buf.split(/\r?\n\r?\n/);
+          var blocks = buf.split("\n\n");
           buf = blocks.pop();
           for (var i = 0; i < blocks.length; i++) {
             var parsed = parseSSEBlock(blocks[i]);
-            emitParsed(parsed);
+            if (parsed) onEvent(parsed.event, parsed.data);
           }
           return pump();
         });
@@ -881,7 +800,7 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
     var name = doc.source || doc.title || doc.id;
     if (!window.confirm("确认删除文档「" + name + "」？\n将移除其索引块与资产文件；docs_dir 中的原文件不会被删除。")) return;
     api("/documents/" + encodeURIComponent(doc.id), { method: "DELETE" }).then(function (data) {
-      var n = data && data.chunks_removed != null ? data.chunks_removed : 0;
+      var n = data && data.removed_chunks != null ? data.removed_chunks : 0;
       showAlert("已删除「" + name + "」，移除索引块 " + n + " 个。", "ok");
       refreshDocuments();
       refreshHealth(true);
@@ -1096,7 +1015,7 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
     } else {
       var img = el("img");
       img.loading = "lazy";
-      loadProtectedImage(img, c.asset_url);
+      img.src = c.asset_url;
       img.alt = c.text ? String(c.text).slice(0, 80) : "引用图片";
       img.addEventListener("click", function () { openLightbox(c.asset_url); });
       img.addEventListener("error", function () {
@@ -1110,20 +1029,8 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
   }
 
   function openLightbox(url) {
-    loadProtectedImage($("lightbox-img"), url);
+    $("lightbox-img").src = url;
     $("lightbox").hidden = false;
-  }
-
-  function loadProtectedImage(img, url) {
-    var target = new URL(url, location.href);
-    if (!getToken() || target.origin !== location.origin || !target.pathname.startsWith('/api/v1/assets/')) { img.src = target.href; return; }
-    fetch(target.href, {headers:{Authorization:'Bearer ' + getToken()}}).then(function(response) {
-      if (!response.ok) throw new Error('图片请求失败'); return response.blob();
-    }).then(function(blob) {
-      var objectUrl = URL.createObjectURL(blob);
-      img.addEventListener('load',function() { URL.revokeObjectURL(objectUrl); },{once:true});
-      img.src = objectUrl;
-    }).catch(function() { img.dispatchEvent(new Event('error')); });
   }
   function closeLightbox() {
     $("lightbox").hidden = true;
@@ -1227,7 +1134,7 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
       method: "POST",
       body: {
         query: query,
-        top_k: clampInt($("q-topk").value, 1, 50, 6),
+        top_k: clampInt($("q-topk").value, 1, 20, 6),
         filters: filters,
         abilities: filters.abilities || []
       }
@@ -1264,7 +1171,6 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
     if (s.files_skipped != null) parts.push("跳过 " + s.files_skipped);
     if (s.chunks_added != null) parts.push("新增块 " + s.chunks_added);
     if (s.chunks_removed != null) parts.push("移除块 " + s.chunks_removed);
-    if (s.files_failed) parts.push("失败 " + s.files_failed);
     if (s.assets != null) parts.push("资产 " + s.assets);
     if (s.elapsed_ms != null) parts.push("耗时 " + s.elapsed_ms + " ms");
     return parts.length ? parts.join(" · ") : "无统计";
@@ -1272,7 +1178,6 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
 
   function renderJob(job) {
     $("ingest-box").hidden = false;
-    $("btn-ingest-cancel").hidden = job.status !== "running";
     var pr = job.progress || {};
     var percent = pr.percent != null ? pr.percent : (pr.total ? Math.round(pr.current / pr.total * 100) : 0);
     setIngestProgress(percent, (job.message || job.status || "—") + " · " + (job.job_id || ""));
@@ -1319,7 +1224,7 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
     }
     api("/ingest", {
       method: "POST",
-      body: { mode: mode === "rebuild" ? "full" : mode, paths: [] }
+      body: { mode: mode, paths: [], rebuild: mode === "rebuild" }
     }).then(function (data) {
       $("ingest-logs").textContent = "";
       showAlert("入库任务已启动：" + (data && data.job_id ? data.job_id : "—"), "ok");
@@ -1377,7 +1282,7 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
       var fd = new FormData();
       fd.append("file", file);
       fd.append("source", $("up-source").value.trim() || file.name);
-      fd.append("ingest", "false");
+      fd.append("ingest", "true");
       appendIf(fd, "dynasty", $("up-dynasty").value);
       appendIf(fd, "place", $("up-place").value);
       appendIf(fd, "topic", $("up-topic").value);
@@ -1402,7 +1307,7 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
           status.textContent = "完成";
           status.className = "upload-status mono ok";
           var jobId = env.data && env.data.job_id;
-          showAlert("已上传 " + file.name + "，全部文件上传后统一入库。", "ok");
+          showAlert("已上传 " + file.name + "，入库任务" + (jobId ? " " + jobId + " 已启动。" : "已启动。"), "ok");
           if (jobId) startPolling(jobId);
           refreshDocuments();
           refreshHealth(true);
@@ -1434,12 +1339,11 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
   function uploadFiles(files) {
     var list = Array.prototype.slice.call(files || []);
     if (!list.length) return Promise.resolve();
-    if (list.length > 1 && $("up-source").value.trim()) { showAlert('批量上传时请清空目标路径，每个文件使用自己的文件名。','warn'); return Promise.resolve(); }
     var chain = Promise.resolve();
     list.forEach(function (f) {
       chain = chain.then(function () { return uploadOne(f); });
     });
-    return chain.then(function () { startIngest("incremental"); });
+    return chain;
   }
 
   /* ---------------- 对话 ---------------- */
@@ -1497,7 +1401,7 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
 
     var turn = {
       id: id, question: question, raw: "", sources: [], sites: [],
-      el: wrap, userEl: userWrap, bodyEl: bodyEl, structuredEl: structuredEl, errEl: errEl,
+      el: wrap, bodyEl: bodyEl, structuredEl: structuredEl, errEl: errEl,
       ttftEl: ttft, metaTextEl: metaText, rewriteEl: rewrite, sitesEl: sites,
       t0: 0, clientTtft: null, done: null, structured: null, requestId: "", model: ""
     };
@@ -1610,8 +1514,7 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
     $("btn-stop").hidden = !on;
   }
 
-  function finalizeTurn(turn, aborted, controller) {
-    if (controller && state.controller !== controller) return;
+  function finalizeTurn(turn, aborted) {
     state.streaming = false;
     state.controller = null;
     setStreamingUI(false);
@@ -1621,7 +1524,7 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
     updateTurnMeta(turn, aborted);
     var answer = turn.raw || (turn.structured ? structuredToText(turn.structured) : "");
     if (turn.question) {
-      state.history.push({ role: "user", content: turn.question, images: turn.images || [] });
+      state.history.push({ role: "user", content: turn.question });
       if (answer) state.history.push({ role: "assistant", content: answer });
       state.history = state.history.slice(-20);
     }
@@ -1635,7 +1538,6 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
     foot.push("history " + Math.floor(state.history.length / 2) + " 轮");
     $("chat-meta").textContent = "上一轮：" + foot.join(" · ");
     scrollMessages();
-    refreshTraces();
   }
 
   function applyNonStream(turn, data) {
@@ -1680,19 +1582,8 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
     var controller = new AbortController();
     state.controller = controller;
 
-    // 与同源的《蜀迹》剧情共用存档。只把已完成地点映射成解锁能力，
-    // 后端仍会再次按地点能力拦截，前端状态只用于传递进度。
-    var unlockedMemories = [];
-    try {
-      var story = JSON.parse(localStorage.getItem("shuji-story-v3") || "{}");
-      var done = Array.isArray(story.done) ? story.done : [];
-      var memoryBySite = {wuhou:"sanguo", dufu:"shici", dujiangyan:"shuili", sanxingdui:"wenwu", jinsha:"jinqi"};
-      unlockedMemories = done.map(function(id) { return memoryBySite[id]; }).filter(Boolean);
-    } catch (_) { /* 无存档时按未解锁处理 */ }
     var payload = {
       question: question,
-      unlocked_memories: unlockedMemories,
-      images: state.imagesForChat || [],
       stream: state.streamEnabled,
       answer_format: state.answerFormat,
       top_k: state.topK,
@@ -1700,9 +1591,8 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
       history: state.history.slice(-20),
       filters: {},
       use_tools: true,
-      rewrite: !(state.imagesForChat && state.imagesForChat.length)
+      rewrite: true
     };
-    if (state.imagesForChat && state.imagesForChat.length) { turn.images = state.imagesForChat.slice(); turn.images.forEach(function(image) { var thumbnail = document.createElement("img"); thumbnail.src = image; thumbnail.alt = "本轮提问图片"; thumbnail.style.cssText = "max-width:180px;max-height:150px"; turn.userEl.appendChild(thumbnail); }); state.imagesForChat = null; }
     turn.t0 = performance.now();
 
     var work;
@@ -1717,23 +1607,22 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
     }
 
     work.then(function () {
-      finalizeTurn(turn, controller.signal.aborted, controller);
+      finalizeTurn(turn, controller.signal.aborted);
     }).catch(function (e) {
       if (e && e.name === "AbortError") {
-        finalizeTurn(turn, true, controller);
+        finalizeTurn(turn, true);
         return;
       }
       var msg = describeError(e);
       showChatError(msg);
       turn.errEl.textContent = msg;
       turn.errEl.hidden = false;
-      finalizeTurn(turn, false, controller);
+      finalizeTurn(turn, false);
     });
   }
 
   function newSession() {
     if (state.streaming && state.controller) state.controller.abort();
-    state.controller = null; state.streaming = false; setStreamingUI(false);
     state.history = [];
     state.sessionId = "s_" + randHex(8);
     state.activeTurnId = "";
@@ -1759,7 +1648,6 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
       refreshStats();
       refreshDocuments();
       loadSites();
-      loadModelSettings();
     });
 
     $("btn-new").innerHTML = ICON.plus;
@@ -1854,141 +1742,8 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
     });
   }
 
-
-  var selectedPhoto = '';
-  var selectedPhotos = [];
-  var photoBusy = false;
-  function refreshTraces() {
-    api('/traces?limit=12').then(function(data) {
-      var list = data.traces || []; var host = $('trace-list'); host.textContent = '';
-      if (!list.length) { host.textContent = '还没有问答记录。'; return; }
-      list.forEach(function(trace) {
-        var row = el('div', 'mt6'); row.appendChild(el('strong', '', trace.question));
-        row.appendChild(el('div', 'muted', (trace.model || '') + ' · ' + trace.elapsed_ms + ' ms' + (trace.error ? ' · ' + trace.error : ''))); host.appendChild(row);
-      });
-    }).catch(function(error) { $('trace-list').textContent = describeError(error); });
-  }
-  function loadModelSettings() {
-    api('/settings/models').then(function(settings) {
-      var c = settings.chat || {}, e = settings.embedding || {}, v = settings.vision || {};
-      $('set-api-mode').value = settings.api_mode || 'three';
-      $('set-chat-provider').value = c.provider || 'ollama'; $('set-chat-url').value = c.base_url || ''; $('set-chat-model').value = c.model || '';
-      $('set-chat-key').value = ''; $('set-chat-key-state').textContent = c.api_key_configured ? 'API Key 已保存（不会回显）；留空会保留。' : '尚未配置 API Key。';
-      $('set-embedding-provider').value = e.provider || 'ollama'; $('set-embedding-url').value = e.base_url || ''; $('set-embedding-model').value = e.model || ''; $('set-embedding-dim').value = e.dim || 1024;
-      $('set-embedding-key').value = ''; $('set-embedding-key-state').textContent = (e.api_key_configured ? 'API Key 已保存（不会回显）；留空会保留。' : '尚未配置 API Key。') + '更换模型或维度后需清空重建索引。';
-      $('set-vision-enabled').checked = !!v.enabled; $('set-vision-provider').value = v.provider || 'ollama'; $('set-vision-url').value = v.base_url || ''; $('set-vision-model').value = v.model || ''; $('set-recognize-url').value = v.retrieval_url || '';
-      $('set-vision-key').value = ''; $('set-vision-key-state').textContent = v.api_key_configured ? 'API Key 已保存（不会回显）；留空会保留。' : '尚未配置 API Key。';
-      updateApiModeUI();
-      $('model-settings-status').textContent = settings.pending_restart ? '有待重启生效的配置' : '已加载当前配置';
-    }).catch(function(error) { $('model-settings-status').textContent = '读取失败：' + describeError(error); });
-  }
-  function saveModelSettings() {
-    var body = {
-      api_mode:$('set-api-mode').value,
-      chat: {provider:$('set-chat-provider').value,base_url:$('set-chat-url').value.trim(),model:$('set-chat-model').value.trim(),api_key:$('set-chat-key').value,clear_api_key:$('set-chat-clear').checked},
-      embedding: {provider:$('set-embedding-provider').value,base_url:$('set-embedding-url').value.trim(),model:$('set-embedding-model').value.trim(),dim:Number($('set-embedding-dim').value),api_key:$('set-embedding-key').value,clear_api_key:$('set-embedding-clear').checked},
-      vision: {enabled:$('set-vision-enabled').checked,provider:$('set-vision-provider').value,base_url:$('set-vision-url').value.trim(),model:$('set-vision-model').value.trim(),api_key:$('set-vision-key').value,clear_api_key:$('set-vision-clear').checked,retrieval_url:$('set-recognize-url').value.trim()}
-    };
-    var button = $('btn-model-settings-save'); button.disabled = true; $('model-settings-status').textContent = '正在安全保存…';
-    api('/settings/models',{method:'PUT',body:body}).then(function() {
-      $('set-chat-key').value = ''; $('set-embedding-key').value = ''; $('set-vision-key').value = '';
-      $('set-chat-clear').checked = false; $('set-embedding-clear').checked = false; $('set-vision-clear').checked = false;
-      $('model-settings-status').textContent = '已保存；重启后生效';
-      showAlert(($('set-api-mode').value === 'two' ? 'Chat 与 Vision 共用 API，' : '三组 API 配置，') + '已分别保存到本机文件。点击顶部“重启服务”使配置生效；更换 Embedding 模型或维度后还需清空重建索引。','ok');
-    }).catch(function(error) { $('model-settings-status').textContent = '保存失败'; showAlert('配置未保存：' + describeError(error),'err'); })
-      .finally(function(){ button.disabled = false; });
-  }
-  function bindConnectedFeatures() {
-    $('btn-model-settings-save').addEventListener('click', saveModelSettings);
-    $('btn-service-restart').addEventListener('click', async function() {
-      var button = this;
-      if (!window.confirm('重启会让控制台和地图短暂断开，服务恢复后页面会自动重连。现在重启吗？')) return;
-      button.disabled = true;
-      try {
-        await api('/system/restart', {method:'POST', body:{}});
-        showAlert('正在重启服务，请稍候…', 'warn');
-        await new Promise(function(resolve) { setTimeout(resolve, 1200); });
-        var wentOffline = false;
-        for (var attempt = 0; attempt < 90; attempt++) {
-          try {
-            await api('/health');
-            if (wentOffline) {
-              button.disabled = false;
-              showAlert('服务已重启并恢复连接。', 'ok');
-              refreshHealth(); refreshConfig(); refreshStats(); refreshDocuments(); loadSites(); loadModelSettings();
-              return;
-            }
-          } catch (_) { wentOffline = true; }
-          await new Promise(function(resolve) { setTimeout(resolve, 800); });
-        }
-        throw new Error('等待服务恢复超时，请检查启动窗口。');
-      } catch (error) {
-        button.disabled = false;
-        showAlert('服务重启失败：' + describeError(error), 'err');
-      }
-    });
-    $('btn-service-stop').addEventListener('click', async function() {
-      var button = this;
-      if (!window.confirm('停止后控制台和地图将暂时无法使用。之后可通过“启动项目.cmd”重新启动。确定停止服务吗？')) return;
-      button.disabled = true;
-      try {
-        await api('/system/stop', {method:'POST', body:{}});
-        showAlert('服务正在停止。之后双击“启动项目.cmd”即可重新启动。', 'warn');
-      } catch (error) {
-        button.disabled = false;
-        showAlert('停止服务失败：' + describeError(error), 'err');
-      }
-    });
-    $('set-api-mode').addEventListener('change', updateApiModeUI);
-    loadModelSettings();
-    $('btn-photo-sample').onclick = async function() {
-      this.disabled = true;
-      try {
-        selectedPhoto = await window.ShujiAPI.sampleImage();
-        selectedPhotos = [selectedPhoto]; $('photo-more').textContent = '';
-        $('photo-preview').src = selectedPhoto; $('photo-preview').hidden = false;
-        $('btn-recognize').disabled = false; $('btn-image-chat').disabled = false;
-        $('photo-result').textContent = '武侯祠示例照片已准备好。';
-      } catch (error) { $('photo-result').textContent = error.message; }
-      finally { this.disabled = false; }
-    };
-    $('photo-input').onchange = async function() {
-      selectedPhoto = ''; selectedPhotos = []; $('photo-more').textContent = ''; $('photo-preview').hidden = true; $('btn-recognize').disabled = true; $('btn-image-chat').disabled = true;
-      try {
-        var files = Array.from(this.files || []); if (files.length < 1 || files.length > 4) throw new Error('每轮请选择 1 至 4 张照片');
-        selectedPhotos = await Promise.all(files.map(window.ShujiAPI.readImage)); selectedPhoto = selectedPhotos[0];
-        $('photo-preview').src = selectedPhoto; $('photo-preview').hidden = false;
-        selectedPhotos.slice(1).forEach(function(image,index) { var thumb = document.createElement('img'); thumb.src = image; thumb.alt = '已选照片 ' + (index+2); thumb.style.cssText = 'width:80px;height:72px;object-fit:cover'; $('photo-more').appendChild(thumb); });
-        $('photo-result').textContent = '已选 ' + selectedPhotos.length + ' 张照片；识景使用第一张，带图问答会发送全部照片。'; $('btn-recognize').disabled = false; $('btn-image-chat').disabled = false;
-      }
-      catch (error) { $('photo-result').textContent = error.message; }
-    };
-    $('btn-photo-clear').onclick = function() { selectedPhoto = ''; selectedPhotos = []; state.imagesForChat = null; $('photo-more').textContent = ''; $('photo-input').value = ''; $('photo-preview').hidden = true; $('photo-preview').removeAttribute('src'); $('btn-recognize').disabled = true; $('btn-image-chat').disabled = true; $('photo-result').textContent = '图片已移除。'; };
-    $('btn-recognize').onclick = async function() {
-      if (!selectedPhoto || photoBusy) return; photoBusy = true; this.disabled = true; $('photo-result').textContent = '正在识别…';
-      try { var result = await api('/recognize', {method:'POST', body:{image:selectedPhoto}}); var host = $('photo-result'); host.textContent = (result.matched ? '识别为：' : '未匹配到已收录景点：') + result.landmark + ' · ' + result.model;
-        if (result.matched && result.site_id) { var link = el('a', '', ' 在地图上查看'); link.href = '/static/shuji/?site=' + encodeURIComponent(result.site_id); link.target = '_blank'; link.rel = 'noopener'; host.appendChild(link); }
-      } catch(error) { $('photo-result').textContent = '识别失败：' + describeError(error); }
-      finally { photoBusy = false; $('btn-recognize').disabled = !selectedPhoto; }
-    };
-    $('btn-image-chat').onclick = function() { if (!selectedPhoto || state.streaming) return; state.imagesForChat = selectedPhotos.slice(); if (!$('question').value.trim()) $('question').value = '这些照片是什么地方？请根据资料介绍。'; sendQuestion(); };
-    $('btn-ingest-cancel').onclick = function() { if (!state.jobId) return; api('/ingest/jobs/' + encodeURIComponent(state.jobId) + '/cancel', {method:'POST'}).then(function() { showAlert('已请求取消，正在等待当前操作结束。', 'warn'); }).catch(function(e) { showAlert(describeError(e),'err'); }); };
-    $('btn-traces').onclick = refreshTraces;
-    refreshTraces();
-    api('/ingest/jobs').then(function(data) { var running = (data.jobs || []).find(function(job) { return job.status === 'running'; }); if (running) startPolling(running.job_id); }).catch(function() {});
-  }
-  function updateApiModeUI() {
-    var shared = $('set-api-mode').value === 'two';
-    $('set-vision-separate-fields').hidden = shared;
-    $('set-vision-shared-hint').hidden = !shared;
-    if (shared) $('set-vision-key-state').textContent = '共用 Chat API Key；图片识别和图片说明均使用 Chat 模型。';
-    else $('set-vision-key-state').textContent = '视觉模型独立配置；识别检索服务为空时由视觉模型识别。';
-    $('set-api-mode-hint').textContent = shared ? 'Chat 与 Vision 共用一套 API；请在 Chat 卡选支持图片输入的模型。' : 'Chat、Embedding、Vision 分别使用各自模型和配置。';
-  }
-
   function init() {
     bindEvents();
-    bindConnectedFeatures();
     $("token-input").value = getToken();
     state.sessionId = "s_" + randHex(8);
     $("messages").appendChild(el("div", "muted", "问点什么吧。发送时会自动带上最近 10 轮对话作为 history。"));

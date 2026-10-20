@@ -1,0 +1,72 @@
+{
+  "name": "shuji-rongbao-desktop",
+  "version": "1.0.0",
+  "description": "蜀迹·蓉宝寻忆记桌面应用",
+  "main": "main.cjs",
+  "private": true,
+  "scripts": {
+    "build:server": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-server.ps1",
+    "start": "npm run build:server && electron .",
+    "dist:win": "npm run build:server && electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "44.9.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "local.map.shuji.rongbao",
+    "productName": "蜀迹·蓉宝寻忆记",
+    "asar": true,
+    "files": [
+      "main.cjs",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/server.exe",
+        "to": "runtime/backend/server.exe"
+      },
+      {
+        "from": "../backend/openapi.yaml",
+        "to": "runtime/backend/openapi.yaml"
+      },
+      {
+        "from": "../backend/configs/config.dev.yaml",
+        "to": "runtime/backend/configs/config.yaml"
+      },
+      {
+        "from": "../frontend",
+        "to": "runtime/frontend"
+      },
+      {
+        "from": "../data/corpus",
+        "to": "runtime/data/corpus"
+      },
+      {
+        "from": "../backend/configs/sites.json",
+        "to": "runtime/backend/configs/sites.json"
+      }
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Shuji-Rongbao-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "蜀迹·蓉宝寻忆记"
+    }
+  }
+}
