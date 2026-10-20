@@ -28,4 +28,4 @@ npm install
 npm run dist:win
 ```
 
-脚本会先编译 Go 服务，再生成 Windows x64 NSIS 安装包：`desktop/dist/Shuji-Rongbao-Setup-1.0.0.exe`。安装包包含 Go 服务、前端、知识库语料和运行配置，不包含 Ollama 或模型权重。使用者需单独安装 Ollama 与项目配置的模型，才能使用检索、问答和图片识别功能。
+脚本会先编译 Go 服务，再生成 Windows x64 NSIS 安装包：`desktop/dist/Shuji-Rongbao-Setup-1.0.1.exe`。安装包包含 Go 服务、前端、知识库语料和运行配置，不包含 Ollama 或模型权重。使用者需单独安装 Ollama 与项目配置的模型，才能使用检索、问答和图片识别功能。

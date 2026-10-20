@@ -1,6 +1,6 @@
 {
   "name": "shuji-rongbao-desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "蜀迹·蓉宝寻忆记桌面应用",
   "main": "main.cjs",
   "private": true,

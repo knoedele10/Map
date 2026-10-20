@@ -118,7 +118,7 @@ if (!app.requestSingleInstanceLock()) {
       }
     });
     mainWindow.on('closed', () => { mainWindow = null; });
-    await mainWindow.loadURL(`${origin}/`);
+    await mainWindow.loadURL(`${origin}/static/shuji/`);
   }
 
   async function launch() {
