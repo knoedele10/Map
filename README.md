@@ -1,6 +1,23 @@
 # 蜀迹 · 蓉宝寻忆记
 
-项目由 Go 后端、静态前端和本机知识库组成。除浏览器访问的源码运行方式外，`desktop/` 还提供 Electron 桌面窗口外壳；目前可从源码启动，Windows 安装包需单独构建。
+项目由 Go 后端、静态前端和本机知识库组成。除浏览器访问的源码运行方式外，`desktop/` 还提供 Electron 桌面窗口外壳；v1.0.0 Windows 安装包可从 [GitHub Releases](https://github.com/knoedele10/Map/releases/tag/v1.0.0) 下载，也可以自行从源码构建。
+
+## 最新更新：v1.0.0
+
+- 整理后端、前端、配置和桌面端目录结构。
+- 更新完整前端资源，加入背景音乐和美食小游戏资源。
+- 添加 Electron Windows 桌面外壳、Docker 构建文件和打包说明。
+- 下载 Windows 安装包：[蜀迹·蓉宝寻忆记 v1.0.0](https://github.com/knoedele10/Map/releases/tag/v1.0.0)。
+
+从源码重新打包 Windows 安装程序：
+
+```powershell
+cd A:\Map\desktop
+npm install
+npm run dist:win
+```
+
+安装包输出在 `desktop/dist/Shuji-Rongbao-Setup-1.0.0.exe`。需要 Windows x64、Go 1.25+、Node.js 和 npm。Ollama 与项目使用的模型需要另行安装。完整更新记录见 [`docs/更新通知.md`](docs/更新通知.md)。
 
 ## 启动
 
