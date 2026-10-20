@@ -7,10 +7,11 @@
 <link rel="stylesheet" href="maplibre-gl.css">
 <link rel="stylesheet" href="longbao-games.css?v=20261016-chapter-media2">
 <script src="longbao-games.js?v=20261016-chapter-media2"></script>
-<link rel="stylesheet" href="food-game.css?v=20261018-food1">
-<script src="food-game.js?v=20261018-food1"></script>
-<link rel="stylesheet" href="bgm.css?v=20261018-bgm1">
-<script src="bgm.js?v=20261018-bgm1"></script>
+<link rel="stylesheet" href="food-game.css?v=20261020-dialect-audio1">
+<script src="food-game.js?v=20261020-dialect-audio1"></script>
+<link rel="stylesheet" href="bgm.css?v=20261019-voice1">
+<script src="bgm.js?v=20261019-voice1"></script>
+<script src="exploration-voice.js?v=20261020-voice3"></script>
 <script type="importmap">
 {"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/jsm/"}}
 </script>
@@ -2103,6 +2104,11 @@ const chapterOf = id => CHAPTER_OF[id] || null;
 const longbaoForm = () => Math.min(5, state.main);
 const save = () => { try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} };
 if(repairedProgress) save();
+/* 探索语音独立记录进入次数；旧存档已完成的章节直接使用再次探索语音。 */
+if(!Array.isArray(state.exploredSites)){
+  state.exploredSites=MAINLINE.filter(ch=>ch.ch<=state.main || state.done.includes(ch.id)).map(ch=>ch.id);
+  save();
+}
 const isDone = id => state.done.includes(id);
 const unlocked = () => state.done.map(id => (SITES.find(s=>s.id===id)||{}).ability).filter(Boolean);
 const missionCard = document.createElement('button');
@@ -2545,7 +2551,7 @@ const STORY_RELICS = {
   finale:['五色记忆碎片','蓉宝守护纹章','蜀地长卷']
 };
 
-let story = null, storySite = null, nodeIdx = 0, typing = null, typingFull = '', nodeEnteredAt = 0, storyAdvancedChapter = 0;
+let story = null, storySite = null, nodeIdx = 0, typing = null, typingFull = '', nodeEnteredAt = 0, storyAdvancedChapter = 0, storySession = 0;
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 
 function sceneMotif(hue, ink){
@@ -2566,9 +2572,15 @@ function sceneMotif(hue, ink){
 
 async function startStory(site){
   const sc = LONGPU[site.id] || STORIES[site.id]; if(!sc) return;
+  const session = ++storySession;
+  if(window.ShujiVoice) window.ShujiVoice.stop();
   currentSite = site; storySite = site; story = sc; nodeIdx = 0; storyAdvancedChapter = 0;
   if(window.ShujiBGM) window.ShujiBGM.playFor(site.id);
+  if(window.ShujiVoice && window.ShujiVoice.has(site.id)){
+    window.ShujiVoice.begin(site.id);
+  }
   storyScreen.classList.add('is-active');
+  document.body.classList.add('story-open');
   const bookBtn = document.getElementById('memoryBookBtn'); if(bookBtn) bookBtn.style.display='none';
   const hubBtn = document.getElementById('serverHubBtn'); if(hubBtn) hubBtn.style.display='none';
   missionCard.style.display='none';
@@ -2607,11 +2619,13 @@ async function startStory(site){
   transitYear.textContent = '';
   transit.classList.remove('run'); void transit.offsetWidth; transit.classList.add('run');
   for(let i=1;i<=steps;i++){
+    if(session!==storySession) return;
     const v = Math.round(from + (to - from) * i / steps);
     transitYear.textContent = (v < 0 ? '公元前 ' + (-v) : v) + ' 年';
     await sleep(48);
   }
   await sleep(260);
+  if(session!==storySession) return;
   transitYear.textContent = '';
   renderNode();
 }
@@ -2733,12 +2747,15 @@ chapterCabinet.onkeydown=e=>{
   }
 };
 function exitStory(){
+  ++storySession;
   clearInterval(typing); typing = null;
+  if(window.ShujiVoice) window.ShujiVoice.stop();
   if(window.ShujiBGM) window.ShujiBGM.playFor('map');
   if(!chapterCabinet.hidden)closeChapterCabinet();
   factWrap.classList.remove('show');
   storyScreen.classList.remove('relic-viewer-active');
   storyScreen.classList.remove('is-active');
+  document.body.classList.remove('story-open');
   const bookBtn = document.getElementById('memoryBookBtn'); if(bookBtn) bookBtn.style.display='';
   const hubBtn = document.getElementById('serverHubBtn'); if(hubBtn) hubBtn.style.display='';
   syncMissionCard();
@@ -2882,6 +2899,7 @@ async function finishStory(){
     state.taskPending = false;
     if(!state.prologue){ state.prologue = true; }
     save(); syncMissionCard(); refreshMarkers(); renderRongRong();
+    window.ShujiVoice?.playClip?.('assets/audio/prologue-hello.mp3','第零章结束 · 蓉宝问候');
     await toast('✦', '主线开启 · 按时间顺序', '第一处 · ' + MAINLINE[0].title);
     return;
   }
@@ -2890,6 +2908,8 @@ async function finishStory(){
     return;
   }
   if(ch){                                              /* 主线五章：严格顺序推进 */
+    /* 本章剧情与互动全部结束后，再播放“后.zip”中的探索完成语音。 */
+    window.ShujiVoice?.playAfter?.(s.id);
     if(ch.ch === state.main + 1){
       state.main = ch.ch;
       const site = SITES.find(x=>x.id===ch.id);            /* 顺带解锁对应蜀地知识 */

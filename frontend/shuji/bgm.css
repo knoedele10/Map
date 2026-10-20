@@ -7,6 +7,7 @@
 }
 #bgmToggle:hover{transform:translateY(-2px);filter:brightness(1.13)}
 #bgmToggle:active{transform:translateY(1px) scale(.97)}
+body.story-open #bgmToggle{top:20px;right:150px}
 #bgmToggle .bgm-icon{
   display:grid;place-items:center;width:28px;height:28px;border-radius:50%;color:#543716;
   background:radial-gradient(circle at 35% 28%,#fff1ad 0,#d8a63d 55%,#8e5c19 100%);
@@ -18,9 +19,25 @@
 #bgmToggle.is-error{border-color:rgba(197,101,78,.8);color:#ffd5c8}
 #bgmToggle .bgm-label{white-space:nowrap}
 #bgmPlayer{display:none}
+#bgmToggle:focus-visible,#explorationVoice button:focus-visible{outline:3px solid #fff0ad;outline-offset:4px}
+#explorationVoice{
+  position:fixed;top:76px;left:50%;transform:translateX(-50%);z-index:11990;
+  display:flex;align-items:center;gap:10px;max-width:calc(100vw - 360px);padding:6px 8px 6px 16px;
+  color:#fff0c5;background:rgba(12,35,31,.94);border:1px solid #ab914e;border-radius:14px;
+  box-shadow:0 5px 18px #0004;font:12px/1.6 var(--sans,"Microsoft YaHei",sans-serif);
+}
+#explorationVoice[hidden],#explorationVoicePlayer{display:none}
+#explorationVoiceStatus{max-width:350px}
+#explorationVoice button{min-height:44px;padding:8px 12px;white-space:nowrap;color:#fff0c5;border:1px solid #9c8247;border-radius:9px;background:#28483c;font:inherit}
+#explorationVoice button:disabled{opacity:.65;cursor:default}
+#explorationVoice button:hover:not(:disabled){background:#3e604b}
 @keyframes bgmPulse{0%,100%{box-shadow:inset 0 1px 2px rgba(255,255,255,.72),0 0 8px rgba(224,174,68,.24)}50%{box-shadow:inset 0 1px 2px rgba(255,255,255,.72),0 0 18px rgba(255,202,87,.64)}}
 @media(max-width:760px){
   #bgmToggle{right:12px;top:64px;padding:7px;min-width:44px;justify-content:center}
+  body.story-open #bgmToggle{top:70px;right:126px}
   #bgmToggle .bgm-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  #explorationVoice{top:116px;width:calc(100vw - 24px);max-width:560px;gap:6px;padding:6px 8px;font-size:11px}
+  #explorationVoiceStatus{flex:1;min-width:0}
+  #explorationVoice button{padding:7px 8px}
 }
 @media(prefers-reduced-motion:reduce){#bgmToggle.is-playing .bgm-icon{animation:none}}
