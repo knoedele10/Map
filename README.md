@@ -71,32 +71,32 @@ A:\Map\
 │   ├── deploy/              数据库部署文件
 │   └── docs/、eval/、scripts/
 ├── frontend/                控制台、地图游戏和静态资源
+│   └── shuji/               蜀迹游戏页面、脚本、样式与媒体资源
 ├── desktop/                 Electron 桌面外壳与 Windows 打包配置
 ├── data/
 │   ├── corpus/              当前知识库语料（含分类景点图片）
 │   └── runtime/             索引快照、日志、临时文件和缓存
 ├── config/                  环境变量示例和本机密钥文件
-├── scripts/                 前端检查与 HTTP 联调脚本
+├── scripts/                 检查、前端资源检查和 HTTP 联调脚本
 ├── docs/                    联调记录和截图
-├── archive/                 仅供追溯的原始交付与资源备份（不参与运行）
 ├── Dockerfile               Docker 镜像构建
 ├── .dockerignore            Docker 构建上下文排除项
-├── check.ps1                后端与前端检查入口
+├── .gitattributes            Windows 安装包的 Git LFS 规则
 ├── start.ps1                本地启动入口
 └── 启动项目.cmd             Windows 双击启动入口
 ```
 
 运行中生成的索引、日志与缓存统一写入 `data/runtime/`；前端检查脚本也将临时文件写在该目录。
 
-`archive/` 下的内容是原始交付/提取备份，不参与当前启动。新增的景点 Markdown 来源于原项目 `sites.json`，保留原出处说明，没有额外联网核验。
+本机若有旧版提取备份，可自行放在 `archive/`；它不属于当前源码，也不参与构建或运行。新增的景点 Markdown 来源于原项目 `sites.json`，保留原出处说明，没有额外联网核验。
 
-运行配置、模板和景点数据统一放在 `backend/configs/`；活动配置使用其中的 `sites.json`，不依赖被 Git 忽略的归档目录。根目录 `config/` 只存环境变量示例和本机密钥。Electron、Node 依赖和打包结果分别位于 `desktop/`、`desktop/node_modules/` 和 `desktop/dist/`；依赖和构建产物不会提交到仓库。
+运行配置、模板和景点数据统一放在 `backend/configs/`；活动配置使用其中的 `sites.json`。根目录 `config/` 只存环境变量示例和本机密钥。Electron、Node 依赖和打包结果分别位于 `desktop/`、`desktop/node_modules/` 和 `desktop/dist/`；Node 依赖与中间构建文件不提交，当前 Windows 安装包通过 Git LFS 单独跟踪。
 
 ## 检查与排障
 
 ```powershell
 # 后端检查与前端脚本/本地资源检查
-.\check.ps1
+.\scripts\check.ps1
 
 # 服务启动后做真实 HTTP、检索、上传和删除联调
 python .\scripts\smoke.py

@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$root = $PSScriptRoot
+$root = Split-Path -Parent $PSScriptRoot
 $env:GOCACHE = Join-Path $root 'data/runtime/go-cache'
 $env:TEMP = Join-Path $root 'data/runtime/tmp'
 $env:TMP = $env:TEMP
