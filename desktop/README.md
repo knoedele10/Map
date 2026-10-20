@@ -9,6 +9,21 @@
 - 安装磁盘至少预留 12 GB；完整离线发行包约 7.69 GB（安装器约 0.57 GB，模型分卷约 7.13 GB）
 - 为兼容不同显卡和显存容量，桌面版默认使用 CPU 推理；回答生成会比独显模式慢。建议 16 GB 内存，首次加载模型需等待。
 
+## 下载安装与配置（用户）
+
+打开 [GitHub v1.0.2 下载页](https://github.com/knoedele10/Map/releases/tag/v1.0.2)，在 **Assets** 中下载以下 6 个文件：
+
+- `Shuji-Rongbao-Offline-Setup-1.0.2.exe`
+- `Shuji-Rongbao-Offline-Models-1.0.2.json`（模型校验清单）
+- `Shuji-Rongbao-Offline-Models-1.0.2.part01.bin`
+- `Shuji-Rongbao-Offline-Models-1.0.2.part02.bin`
+- `Shuji-Rongbao-Offline-Models-1.0.2.part03.bin`
+- `Shuji-Rongbao-Offline-Models-1.0.2.part04.bin`
+
+总下载量约 7.69 GB。请先把这 6 个文件全部下载到同一个文件夹，再双击运行安装器。**只下载或双击安装器不会自动从网上下载模型**；四个 `.bin` 分卷和 `.json` 清单必须放在安装器旁边。`blockmap` 是更新辅助文件，普通安装不需要下载。
+
+安装程序会校验模型分卷，安装内置 Ollama CPU 运行时，并解压配置聊天/图片识别共用的 `qwen2.5vl:7b` 和文本检索用的 `bge-m3:latest`。安装完成后不需要另行安装 Ollama、下载模型或联网；安装时请保持安装窗口打开，并预留至少 12 GB 安装磁盘空间。
+
 ## 构建离线安装包
 
 构建电脑需要 Windows x64、Go 1.25+、Node.js/npm、Ollama，以及联网下载模型（仅构建电脑需要联网）。先下载指定模型：

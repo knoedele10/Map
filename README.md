@@ -6,6 +6,7 @@
 
 [GitHub Release 下载页](https://github.com/knoedele10/Map/releases/tag/v1.0.2)
 
+- **安装方法：**下载页中安装器、JSON 清单和四个模型分卷，共 6 个文件，放在同一文件夹后再双击安装器。仅运行 EXE 不会自动下载模型；安装器会校验、安装并配置内置 Ollama 和两个模型。完整步骤见 [`desktop/README.md`](desktop/README.md#下载安装与配置用户)。
 - 聊天与图片识别统一使用 `qwen2.5vl:7b`，检索使用 `bge-m3:latest`。
 - 桌面离线发行包由安装器和模型分卷组成；全套文件放在同一目录运行安装器即可。
 - 安装流程会校验并安装内置 Ollama 和两个模型；运行时使用 CPU 推理，安装完成后可断网使用。
