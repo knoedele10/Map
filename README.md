@@ -1,14 +1,15 @@
 # 蜀迹 · 蓉宝寻忆记
 
-项目由 Go 后端、静态前端和本机知识库组成。除浏览器访问的源码运行方式外，`desktop/` 还提供 Electron 桌面窗口外壳；v1.0.1 Windows 安装包可从 [GitHub Releases](https://github.com/knoedele10/Map/releases/tag/v1.0.1) 下载，也可以自行从源码构建。
+项目由 Go 后端、静态前端和本机知识库组成。`desktop/` 提供独立 Electron 桌面版。v1.0.2 提供包含 Ollama 和 AI 模型的 Windows 离线发行包。
 
-## 最新更新：v1.0.1
+## 最新版本：v1.0.2
 
-- 整理后端、前端、配置和桌面端目录结构。
-- 更新完整前端资源，加入背景音乐和美食小游戏资源。
-- 添加 Electron Windows 桌面外壳、Docker 构建文件和打包说明。
-- 修复桌面端启动入口：打开后直接进入蜀迹地图游戏，而不是后台控制台。
-- 下载 Windows 安装包：[蜀迹·蓉宝寻忆记 v1.0.1](https://github.com/knoedele10/Map/releases/tag/v1.0.1)。
+[GitHub Release 下载页](https://github.com/knoedele10/Map/releases/tag/v1.0.2)
+
+- 聊天与图片识别统一使用 `qwen2.5vl:7b`，检索使用 `bge-m3:latest`。
+- 桌面离线发行包由安装器和模型分卷组成；全套文件放在同一目录运行安装器即可。
+- 安装流程会校验并安装内置 Ollama 和两个模型；运行时使用 CPU 推理，安装完成后可断网使用。
+- 模型素材约 7GB，发行包总量约 7.69GB；离线安装需预留至少 12GB 磁盘空间。
 
 从源码重新打包 Windows 安装程序：
 
@@ -18,7 +19,7 @@ npm install
 npm run dist:win
 ```
 
-安装包输出在 `desktop/dist/Shuji-Rongbao-Setup-1.0.1.exe`。需要 Windows x64、Go 1.25+、Node.js 和 npm。Ollama 与项目使用的模型需要另行安装。完整更新记录见 [`docs/更新通知.md`](docs/更新通知.md)。
+离线安装包的构建方式和运行要求见 [`desktop/README.md`](desktop/README.md)。发布前必须在未安装 Ollama 的 Windows 电脑上断网安装并验证聊天、识图和游戏流程。完整更新记录见 [`docs/更新通知.md`](docs/更新通知.md)。
 
 ## 启动
 
@@ -37,7 +38,7 @@ cd A:\Map
 
 需要 Go 1.25+ 和 Ollama。启动脚本会启动已安装的 Ollama，不会下载模型。停止服务后改 Go 代码，再重新运行启动脚本；改前端后浏览器按 `Ctrl+F5`。
 
-桌面版开发与安装包构建说明见 [`desktop/README.md`](desktop/README.md)。桌面外壳在独立窗口运行同一套 Go 服务和前端；Ollama 与模型仍需单独安装。
+桌面版开发与安装包构建说明见 [`desktop/README.md`](desktop/README.md)。开发运行仍连接本机 Ollama；发布安装包会携带独立运行时和模型。
 
 ## 当前本机模型
 
@@ -46,8 +47,7 @@ cd A:\Map
 | 用途 | 模型 |
 | --- | --- |
 | Embedding 检索 | Ollama `bge-m3:latest`，1024 维 |
-| Chat 对话 | Ollama `qwen2.5:7b` |
-| Vision 识图与图片说明 | Ollama `qwen2.5vl-16k:latest` |
+| Chat 对话与 Vision 识图 | Ollama `qwen2.5vl:7b` |
 
 控制台的“模型与 API 配置”支持两种模式：两个 API 时 Chat 与 Vision 共用同一模型/API，Embedding 单独配置；三个 API 时三者分别配置。配置分别保存在 `config/.env.chat.local`、`config/.env.embedding.local`、`config/.env.vision.local`，密钥不会回显。保存后重启服务生效。Embedding 模型或维度变化后需要清空重建索引。
 

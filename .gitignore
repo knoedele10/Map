@@ -13,6 +13,9 @@ data/runtime/**
 # Archived source snapshots and bundled build outputs
 archive/
 
+# Local Go build cache
+.gocache/
+
 # Generated binaries and packaging artifacts
 backend/server.exe
 release-output/

@@ -26,8 +26,8 @@ embedding:
 chat:
   provider: "ollama"
   base_url: "http://127.0.0.1:11434"
-  model: "qwen2.5:7b"
-  vision_model: "qwen2.5vl-16k:latest"
+  model: "qwen2.5vl:7b"
+  vision_model: "qwen2.5vl:7b"
   temperature: 0.1
   max_tokens: 1536
   timeout_s: 240
@@ -35,7 +35,7 @@ vision:
   enabled: true
   provider: "ollama"
   base_url: "http://127.0.0.1:11434"
-  model: "qwen2.5vl-16k:latest"
+  model: "qwen2.5vl:7b"
   timeout_s: 180
   max_image_mb: 8
   max_images_per_doc: 50

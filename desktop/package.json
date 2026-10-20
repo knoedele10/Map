@@ -1,13 +1,13 @@
 {
   "name": "shuji-rongbao-desktop",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "蜀迹·蓉宝寻忆记桌面应用",
   "main": "main.cjs",
   "private": true,
   "scripts": {
     "build:server": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-server.ps1",
     "start": "npm run build:server && electron .",
-    "dist:win": "npm run build:server && electron-builder --win nsis --x64"
+    "dist:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stage-offline-runtime.ps1 && npm run build:server && node scripts/build-installer.cjs"
   },
   "devDependencies": {
     "electron": "44.9.0",
@@ -45,6 +45,18 @@
       {
         "from": "../backend/configs/sites.json",
         "to": "runtime/backend/configs/sites.json"
+      },
+      {
+        "from": "offline-runtime/ollama",
+        "to": "offline-runtime/ollama"
+      },
+      {
+        "from": "build/unpack-models.exe",
+        "to": "offline-runtime/unpack-models.exe"
+      },
+      {
+        "from": "licenses",
+        "to": "licenses"
       }
     ],
     "directories": {
@@ -59,9 +71,10 @@
           ]
         }
       ],
-      "artifactName": "Shuji-Rongbao-Setup-${version}.${ext}"
+      "artifactName": "Shuji-Rongbao-Offline-Setup-${version}.${ext}"
     },
     "nsis": {
+      "include": "scripts/installer-models.nsh",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,

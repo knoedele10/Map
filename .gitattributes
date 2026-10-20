@@ -1,1 +1,2 @@
-desktop/dist/Shuji-Rongbao-Setup-1.0.1.exe filter=lfs diff=lfs merge=lfs -text
+desktop/dist/Shuji-Rongbao-*.exe filter=lfs diff=lfs merge=lfs -text
+desktop/dist/Shuji-Rongbao-Offline-Models-*.part*.bin filter=lfs diff=lfs merge=lfs -text
