@@ -1,15 +1,14 @@
 # 蜀迹 · 蓉宝寻忆记
 
-项目由 Go 后端、静态前端和本机知识库组成。desktop/ 提供独立 Electron 桌面版。v1.0.3 提供纯本体版和包含 Ollama 与 AI 模型的完整离线版。
+项目由 Go 后端、静态前端和本机知识库组成。desktop/ 提供独立 Electron 桌面版。v1.0.3 当前发布纯本体版。
 
 ## 最新版本：v1.0.3
 
 [GitHub Release 下载页](https://github.com/knoedele10/Map/releases/tag/v1.0.3)
 
 - 纯本体版：下载 Shuji-Rongbao-Core-Setup-1.0.3.exe，双击安装即可体验游戏；AI 问答和识图需自行配置模型服务。
-- 本地大模型版：下载离线 AI 安装器、JSON 清单和全部模型分卷，放在同一文件夹后运行安装器；安装完成后可断网使用。
-- 本地模型版聊天与图片识别统一使用 qwen2.5vl:7b，检索使用 bge-m3:latest，采用 CPU 推理。
-- 两个版本的要求和安装说明见 desktop/README.md。
+- 本次发布只包含纯本体安装器：下载 Shuji-Rongbao-Core-Setup-1.0.3.exe 并双击安装。此版本不包含 Ollama 或 AI 模型；AI 问答和识图需自行配置模型服务。
+- 安装要求和另一种本地大模型版的构建说明见 desktop/README.md。
 
 从源码重新打包 Windows 安装程序：
 
@@ -20,7 +19,7 @@ npm run dist:core
 npm run dist:win
 ```
 
-两种安装包的构建方式和运行要求见 [`desktop/README.md`](desktop/README.md)。完整更新记录见 [`docs/更新通知.md`](docs/更新通知.md)。
+纯本体和本地大模型安装包的构建方式见 [`desktop/README.md`](desktop/README.md)。完整更新记录见 [`docs/更新通知.md`](docs/更新通知.md)。
 
 ## 启动
 

@@ -21,18 +21,9 @@
 
 ## 下载安装与配置（用户）
 
-打开 [GitHub v1.0.3 下载页](https://github.com/knoedele10/Map/releases/tag/v1.0.3)，在 **Assets** 中下载以下 6 个文件：
+v1.0.3 当前下载页只提供纯本体版：打开 [GitHub v1.0.3 下载页](https://github.com/knoedele10/Map/releases/tag/v1.0.3)，下载 Shuji-Rongbao-Core-Setup-1.0.3.exe 并双击安装。该安装器不包含 Ollama 或 AI 模型。
 
-- `Shuji-Rongbao-Offline-AI-Setup-1.0.3.exe`
-- `Shuji-Rongbao-Offline-Models-1.0.3.json`（模型校验清单）
-- `Shuji-Rongbao-Offline-Models-1.0.3.part01.bin`
-- `Shuji-Rongbao-Offline-Models-1.0.3.part02.bin`
-- `Shuji-Rongbao-Offline-Models-1.0.3.part03.bin`
-- `Shuji-Rongbao-Offline-Models-1.0.3.part04.bin`
-
-总下载量约 7.69 GB。请先把这 6 个文件全部下载到同一个文件夹，再双击运行安装器。**只下载或双击安装器不会自动从网上下载模型**；四个 `.bin` 分卷和 `.json` 清单必须放在安装器旁边。`blockmap` 是更新辅助文件，普通安装不需要下载。
-
-安装程序会校验模型分卷，安装内置 Ollama CPU 运行时，并解压配置聊天/图片识别共用的 `qwen2.5vl:7b` 和文本检索用的 `bge-m3:latest`。安装完成后不需要另行安装 Ollama、下载模型或联网；安装时请保持安装窗口打开，并预留至少 12 GB 安装磁盘空间。
+完整离线 AI 版的构建方式见下文；本次发布未上传其安装器和模型分卷。
 
 ## 构建安装包
 
