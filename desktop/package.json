@@ -1,13 +1,14 @@
 {
   "name": "shuji-rongbao-desktop",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "蜀迹·蓉宝寻忆记桌面应用",
   "main": "main.cjs",
   "private": true,
   "scripts": {
     "build:server": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-server.ps1",
     "start": "npm run build:server && electron .",
-    "dist:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stage-offline-runtime.ps1 && npm run build:server && node scripts/build-installer.cjs"
+    "dist:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stage-offline-runtime.ps1 && npm run build:server && node scripts/build-installer.cjs",
+    "dist:core": "npm run build:server && node scripts/build-installer.cjs core"
   },
   "devDependencies": {
     "electron": "44.9.0",

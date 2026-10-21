@@ -198,9 +198,14 @@ if (!app.requestSingleInstanceLock()) {
       let ollamaPort;
       if (app.isPackaged) {
         ollamaPort = await choosePort();
-        startOllama(ollamaPort);
-        if (!await waitForOllama(ollamaPort)) {
-          throw new Error('内置 Ollama 或模型未能启动。请查看应用日志中的 server.log。');
+        const layout = runtimeLayout();
+        if (fs.existsSync(layout.ollamaExe) && fs.existsSync(layout.ollamaModels) && fs.existsSync(layout.ollamaLib)) {
+          startOllama(ollamaPort);
+          if (!await waitForOllama(ollamaPort)) {
+            throw new Error('内置 Ollama 或模型未能启动。请查看应用日志中的 server.log。');
+          }
+        } else {
+          ollamaPort = undefined;
         }
       }
       startBackend(port, ollamaPort);

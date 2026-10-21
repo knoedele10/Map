@@ -1,26 +1,26 @@
 # 蜀迹 · 蓉宝寻忆记
 
-项目由 Go 后端、静态前端和本机知识库组成。`desktop/` 提供独立 Electron 桌面版。v1.0.2 提供包含 Ollama 和 AI 模型的 Windows 离线发行包。
+项目由 Go 后端、静态前端和本机知识库组成。desktop/ 提供独立 Electron 桌面版。v1.0.3 提供纯本体版和包含 Ollama 与 AI 模型的完整离线版。
 
-## 最新版本：v1.0.2
+## 最新版本：v1.0.3
 
-[GitHub Release 下载页](https://github.com/knoedele10/Map/releases/tag/v1.0.2)
+[GitHub Release 下载页](https://github.com/knoedele10/Map/releases/tag/v1.0.3)
 
-- **安装方法：**下载页中安装器、JSON 清单和四个模型分卷，共 6 个文件，放在同一文件夹后再双击安装器。仅运行 EXE 不会自动下载模型；安装器会校验、安装并配置内置 Ollama 和两个模型。完整步骤见 [`desktop/README.md`](desktop/README.md#下载安装与配置用户)。
-- 聊天与图片识别统一使用 `qwen2.5vl:7b`，检索使用 `bge-m3:latest`。
-- 桌面离线发行包由安装器和模型分卷组成；全套文件放在同一目录运行安装器即可。
-- 安装流程会校验并安装内置 Ollama 和两个模型；运行时使用 CPU 推理，安装完成后可断网使用。
-- 模型素材约 7GB，发行包总量约 7.69GB；离线安装需预留至少 12GB 磁盘空间。
+- 纯本体版：下载 Shuji-Rongbao-Core-Setup-1.0.3.exe，双击安装即可体验游戏；AI 问答和识图需自行配置模型服务。
+- 本地大模型版：下载离线 AI 安装器、JSON 清单和全部模型分卷，放在同一文件夹后运行安装器；安装完成后可断网使用。
+- 本地模型版聊天与图片识别统一使用 qwen2.5vl:7b，检索使用 bge-m3:latest，采用 CPU 推理。
+- 两个版本的要求和安装说明见 desktop/README.md。
 
 从源码重新打包 Windows 安装程序：
 
 ```powershell
 cd A:\Map\desktop
 npm install
+npm run dist:core
 npm run dist:win
 ```
 
-离线安装包的构建方式和运行要求见 [`desktop/README.md`](desktop/README.md)。发布前必须在未安装 Ollama 的 Windows 电脑上断网安装并验证聊天、识图和游戏流程。完整更新记录见 [`docs/更新通知.md`](docs/更新通知.md)。
+两种安装包的构建方式和运行要求见 [`desktop/README.md`](desktop/README.md)。完整更新记录见 [`docs/更新通知.md`](docs/更新通知.md)。
 
 ## 启动
 

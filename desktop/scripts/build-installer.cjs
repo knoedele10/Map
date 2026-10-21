@@ -5,10 +5,14 @@ const { spawn } = require('node:child_process');
 const { Arch, Platform, build } = require('electron-builder');
 
 const desktopRoot = path.resolve(__dirname, '..');
-const output = path.resolve(process.env.MAP_DESKTOP_BUILD_OUTPUT || path.join(desktopRoot, 'dist'));
-const packageInfo = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'package.json'), 'utf8'));
+const packagePath = path.join(desktopRoot, 'package.json');
+const originalPackageJSON = fs.readFileSync(packagePath, 'utf8');
+const packageInfo = JSON.parse(originalPackageJSON);
 const modelRoot = path.join(desktopRoot, 'offline-models', 'ollama');
 const maxPartBytes = 1_900_000_000;
+const coreOnly = process.argv[2] === 'core' || process.env.MAP_DESKTOP_FLAVOR === 'core';
+const defaultOutput = path.join(desktopRoot, coreOnly ? 'dist-core' : 'dist');
+const output = path.resolve(process.env.MAP_DESKTOP_BUILD_OUTPUT || defaultOutput);
 
 async function createModelParts() {
   const baseName = `Shuji-Rongbao-Offline-Models-${packageInfo.version}`;
@@ -85,13 +89,39 @@ async function createModelParts() {
 }
 
 async function main() {
-  await build({
-    targets: Platform.WINDOWS.createTarget(['nsis'], Arch.x64),
-    config: {
-      directories: { output },
+  const baseResources = packageInfo.build.extraResources;
+  const resources = coreOnly
+    ? baseResources.filter((resource) => !resource.from.includes('offline-runtime/ollama') &&
+      !resource.from.includes('unpack-models.exe'))
+    : baseResources;
+  const buildConfig = {
+    directories: { output },
+    nsis: {
+      ...packageInfo.build.nsis,
+      include: coreOnly ? path.join(desktopRoot, 'scripts', 'installer-core.nsh') : path.join(desktopRoot, 'scripts', 'installer-models.nsh'),
     },
-  });
-  await createModelParts();
+    win: {
+      ...packageInfo.build.win,
+      artifactName: coreOnly
+        ? 'Shuji-Rongbao-Core-Setup-' + packageInfo.version + '.' + '${ext}'
+        : 'Shuji-Rongbao-Offline-AI-Setup-' + packageInfo.version + '.' + '${ext}',
+    },
+  };
+  if (coreOnly) {
+    packageInfo.build.extraResources = resources;
+    packageInfo.build.nsis.include = buildConfig.nsis.include;
+    packageInfo.build.win.artifactName = buildConfig.win.artifactName;
+    fs.writeFileSync(packagePath, JSON.stringify(packageInfo, null, 2) + '\n');
+  }
+  try {
+    await build({
+      targets: Platform.WINDOWS.createTarget(['nsis'], Arch.x64),
+      config: buildConfig,
+    });
+  } finally {
+    if (coreOnly) fs.writeFileSync(packagePath, originalPackageJSON);
+  }
+  if (!coreOnly) await createModelParts();
 }
 
 main().catch((error) => {
