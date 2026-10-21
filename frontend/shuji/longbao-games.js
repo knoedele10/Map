@@ -324,7 +324,7 @@
 
   function installBook(getState,startById,forms,mainline){
     if(document.getElementById('memoryBookBtn'))return;
-    const open=el('button','','记忆图鉴');open.id='memoryBookBtn';const hub=el('a','','知识库后台');hub.id='serverHubBtn';hub.href='/';hub.target='_blank';hub.rel='noopener';hub.title='打开 server 提供的文档、入库、检索、问答、景点与运行状态管理页';const modal=el('div');modal.id='memoryBook';const book=el('div','lb-book');modal.appendChild(book);document.body.append(open,hub,modal);
+    const open=el('button','','记忆图鉴');open.id='memoryBookBtn';const modal=el('div');modal.id='memoryBook';const book=el('div','lb-book');modal.appendChild(book);document.body.append(open,modal);
     const close=()=>modal.classList.remove('open');modal.onclick=e=>{if(e.target===modal)close()};
     open.onclick=()=>{const state=getState();book.innerHTML='';const head=el('div','lb-book-head');head.append(el('h2','','蓉宝记忆图鉴'));const x=el('button','', '关闭');x.onclick=close;head.appendChild(x);book.appendChild(head);const sheet=el('img','lb-character-sheet');sheet.src='assets/longbao-six-forms.png';sheet.alt='蓉宝从当代失忆熊猫守护者到古蜀祭司、先秦水工、蜀汉谋士、唐代隐士与川军士兵的六形态设定图';book.appendChild(sheet);const grid=el('div','lb-book-grid');
       mainline.forEach((ch,i)=>{const unlocked=state.main>=ch.ch;const card=el('section','lb-memory'+(unlocked?'':' locked'));card.innerHTML=`<h4>${unlocked?ch.fragment:'未苏醒的碎片'}</h4><p>${ch.title}<br>${unlocked?ch.memory:'完成前一章后解锁'}</p>`;if(unlocked){const b=el('button','', '重温本章');b.onclick=()=>{close();startById(ch.id)};card.appendChild(b)}grid.appendChild(card)});

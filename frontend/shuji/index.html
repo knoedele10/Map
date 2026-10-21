@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>蓉宝寻蜀迹</title>
 <link rel="stylesheet" href="maplibre-gl.css">
-<link rel="stylesheet" href="longbao-games.css?v=20261016-chapter-media2">
-<script src="longbao-games.js?v=20261016-chapter-media2"></script>
+<link rel="stylesheet" href="longbao-games.css?v=20261021-remove-server-hub">
+<script src="longbao-games.js?v=20261021-remove-server-hub"></script>
 <link rel="stylesheet" href="food-game.css?v=20261020-dialect-audio1">
 <script src="food-game.js?v=20261020-dialect-audio1"></script>
 <link rel="stylesheet" href="bgm.css?v=20261019-voice1">
@@ -532,7 +532,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .game-rail button{width:58px;height:58px;border-radius:50%;border:2px solid #77532e;background:linear-gradient(145deg,#fff5cc,#d7b56e);
   box-shadow:0 5px 0 rgba(87,57,31,.42),0 9px 17px rgba(34,59,43,.22);font:700 11px/1.15 var(--serif);color:#563b25;transition:.18s}
 .game-rail button:hover{transform:translateY(-3px) scale(1.05);filter:brightness(1.06)}
-#memoryBookBtn,#serverHubBtn{display:none!important}
+#memoryBookBtn{display:none!important}
 
 /* ============ 剧情：角色占七成、右侧任务栏、底部大对话 ============ */
 #storyScreen{background:#0c272b}
@@ -1000,7 +1000,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     <button id="railMap" title="查看成都离线实景地图"><span class="rail-glyph">城</span><span class="rail-label">查看实景</span></button>
     <button id="railBook" title="查看记忆图鉴"><span class="rail-glyph">忆</span><span class="rail-label">记忆图鉴</span></button>
     <button id="railRongbao" title="和蓉宝对话"><span class="rail-glyph">蓉</span><span class="rail-label">蓉宝问答</span></button>
-    <button id="railHub" title="打开知识库后台"><span class="rail-glyph">库</span><span class="rail-label">知识宝库</span></button>
     <button id="railFood" title="收集蜀味印章"><span class="rail-glyph">味</span><span class="rail-label">蜀味寻宝</span><span id="foodRailCount" class="rail-count">0/8</span></button>
   </nav>
 
@@ -2582,7 +2581,6 @@ async function startStory(site){
   storyScreen.classList.add('is-active');
   document.body.classList.add('story-open');
   const bookBtn = document.getElementById('memoryBookBtn'); if(bookBtn) bookBtn.style.display='none';
-  const hubBtn = document.getElementById('serverHubBtn'); if(hubBtn) hubBtn.style.display='none';
   missionCard.style.display='none';
   const storyPhoto = {
     dufu:'assets/dufu/image1.jpg',
@@ -2757,7 +2755,6 @@ function exitStory(){
   storyScreen.classList.remove('is-active');
   document.body.classList.remove('story-open');
   const bookBtn = document.getElementById('memoryBookBtn'); if(bookBtn) bookBtn.style.display='';
-  const hubBtn = document.getElementById('serverHubBtn'); if(hubBtn) hubBtn.style.display='';
   syncMissionCard();
 }
 
@@ -3429,7 +3426,6 @@ window.ShujiFoodGame?.install?.({
 document.getElementById('railMap').onclick = ()=>setRealMapMode(realMapMode==='atlas' ? 'city' : 'atlas');
 document.getElementById('railBook').onclick = ()=>document.getElementById('memoryBookBtn')?.click();
 document.getElementById('railRongbao').onclick = ()=>document.getElementById('rrAvatar')?.click();
-document.getElementById('railHub').onclick = ()=>window.open('/','_blank','noopener');
 document.getElementById('railFood').onclick = ()=>window.ShujiFoodGame?.open?.();
 
 /* 开场：地图在底层先完成布局与定位，开场页淡出后重新聚焦一次 */

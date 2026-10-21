@@ -12,6 +12,11 @@ if (!app.requestSingleInstanceLock()) {
   let ollamaProcess;
   let mainWindow;
   let serverLog;
+  let restartMarker;
+  let backendRestarting = false;
+  let backendPort;
+  let backendOllamaPort;
+  let isQuitting = false;
 
   function runtimeLayout() {
     if (app.isPackaged) {
@@ -43,6 +48,16 @@ if (!app.requestSingleInstanceLock()) {
       probe.listen(0, '127.0.0.1', () => {
         const port = probe.address().port;
         probe.close((error) => error ? reject(error) : resolve(port));
+      });
+    });
+  }
+
+  function ensurePortAvailable(port) {
+    return new Promise((resolve, reject) => {
+      const probe = net.createServer();
+      probe.once('error', () => reject(new Error(`本机端口 ${port} 已被占用，请关闭占用该端口的程序后重试。`)));
+      probe.listen(port, '127.0.0.1', () => {
+        probe.close((error) => error ? reject(error) : resolve());
       });
     });
   }
@@ -138,8 +153,10 @@ if (!app.requestSingleInstanceLock()) {
     const userData = path.join(app.getPath('userData'), 'runtime');
     const dataDir = path.join(userData, 'data');
     const assetsDir = path.join(userData, 'assets');
+    restartMarker = path.join(userData, 'service-control.request');
     fs.mkdirSync(dataDir, { recursive: true });
     fs.mkdirSync(assetsDir, { recursive: true });
+    try { fs.rmSync(restartMarker, { force: true }); } catch {}
 
     serverProcess = spawn(layout.serverExe, ['-config', layout.configFile], {
       cwd: layout.backendDir,
@@ -153,12 +170,29 @@ if (!app.requestSingleInstanceLock()) {
         } : {}),
         RAG_STORAGE_DATA_DIR: dataDir,
         RAG_STORAGE_ASSETS_DIR: assetsDir,
+        RAG_CONTROL_MARKER: restartMarker,
       },
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    serverProcess.stdout.pipe(serverLog);
-    serverProcess.stderr.pipe(serverLog);
+    const child = serverProcess;
+    child.stdout.pipe(serverLog);
+    child.stderr.pipe(serverLog);
+    child.once('exit', async () => {
+      if (serverProcess !== child || backendRestarting || !restartMarker || !fs.existsSync(restartMarker)) return;
+      let action = '';
+      try { action = fs.readFileSync(restartMarker, 'utf8').trim().split(/\s+/, 1)[0]; } catch {}
+      if (action !== 'restart' || isQuitting) return;
+      backendRestarting = true;
+      try {
+        startBackend(backendPort, backendOllamaPort);
+        if (!await waitForBackend(backendPort)) throw new Error('服务重启后未能恢复，请查看 server.log。');
+      } catch (error) {
+        dialog.showErrorBox('服务重启失败', error.message || String(error));
+      } finally {
+        backendRestarting = false;
+      }
+    });
   }
 
   async function createWindow(port) {
@@ -194,7 +228,8 @@ if (!app.requestSingleInstanceLock()) {
   async function launch() {
     try {
       initLog();
-      const port = await choosePort();
+      const port = 38180;
+      await ensurePortAvailable(port);
       let ollamaPort;
       if (app.isPackaged) {
         ollamaPort = await choosePort();
@@ -208,6 +243,8 @@ if (!app.requestSingleInstanceLock()) {
           ollamaPort = undefined;
         }
       }
+      backendPort = port;
+      backendOllamaPort = ollamaPort;
       startBackend(port, ollamaPort);
       if (!await waitForBackend(port)) {
         throw new Error('本地服务启动失败。请查看应用日志中的 server.log。');
@@ -226,6 +263,7 @@ if (!app.requestSingleInstanceLock()) {
     mainWindow.focus();
   });
   app.on('before-quit', () => {
+    isQuitting = true;
     for (const child of [serverProcess, ollamaProcess]) {
       if (!child || child.exitCode !== null) continue;
       if (process.platform === 'win32') {

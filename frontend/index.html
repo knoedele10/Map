@@ -235,6 +235,7 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
     <div class="grow"></div>
     <input class="token-input" id="token-input" type="password" placeholder="Bearer token（可选）" autocomplete="off">
     <button id="btn-model-settings">模型设置</button>
+    <button id="btn-service-restart" title="重新启动后端服务">重启服务</button>
     <button class="icon-btn" id="btn-refresh" title="刷新状态"></button>
   </header>
   <div class="subbar">
@@ -1723,6 +1724,26 @@ table.tbl th{background:#12161a;color:var(--dim);font-weight:500;white-space:now
 
   /* ---------------- 事件绑定 ---------------- */
   function bindEvents() {
+    $("btn-service-restart").addEventListener("click", function () {
+      var button = this;
+      button.disabled = true;
+      button.textContent = "正在重启…";
+      api("/system/restart", { method: "POST" }).then(function () {
+        showAlert("已发送重启请求，正在等待服务恢复…", "ok");
+        var attempts = 0;
+        var poll = window.setInterval(function () {
+          attempts++;
+          fetch(API + "/health", { headers: getToken() ? { "Authorization": "Bearer " + getToken() } : {} })
+            .then(function (res) { if (res.ok) { window.clearInterval(poll); button.disabled = false; button.textContent = "重启服务"; showAlert("服务已恢复。", "ok"); refreshHealth(true); refreshConfig(); refreshStats(); refreshDocuments(); } })
+            .catch(function () {});
+          if (attempts >= 60) { window.clearInterval(poll); button.disabled = false; button.textContent = "重启服务"; showAlert("等待服务恢复超时，请检查启动窗口。", "err"); }
+        }, 1000);
+      }).catch(function (e) {
+        button.disabled = false;
+        button.textContent = "重启服务";
+        showAlert("重启失败：" + describeError(e), "err");
+      });
+    });
     $("btn-model-settings").addEventListener("click", function () {
       $("model-settings").hidden = false;
       loadModelSettings();
